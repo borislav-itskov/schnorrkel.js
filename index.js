@@ -1,6 +1,9 @@
 const { ethers } = require('ethers')
 const secp256k1 = require('secp256k1')
 const { randomBytes } = require('crypto');
+const EC = require('elliptic').ec;
+const ec = new EC('secp256k1');
+const generatorPoint = ec.g;
 
 function hashMessage(message) {
     return ethers.utils.solidityKeccak256(['string'], [message])
@@ -24,7 +27,12 @@ function sign(message, privateKey) {
         parity
     ])
 
-    return sigData
+
+    return {
+        h: msgHash,
+        s: sigData,
+        r: sig.R
+    }
 }
 
 function signRaw(msgHash, privateKey) {
@@ -61,12 +69,59 @@ function challenge(R, m, publicKey) {
     )
 }
 
-function verify() {
-    // TODO
-    return true
+function verify(signature, hash, R, publicKey) {
+    const abiCoder = new ethers.utils.AbiCoder()
+    const [px, e, s, parity] = abiCoder.decode([ "bytes32", "bytes32", "bytes32", "uint8" ], signature)
+
+    console.log(`verify e decoded: ${ethers.utils.arrayify(e)}`)
+    const eC = challenge(R, hash, publicKey)
+    console.log(`verify e recalced: ${eC}`)
+
+    // const sG = secp256k1.publicKeyCreate(ethers.utils.arrayify(s), false)
+    // console.log(`verify sG: ${sG}`)
+
+    // console.log(R.length, publicKey.length, eC.length)
+    // const Pe = secp256k1.publicKeyTweakMul(publicKey, eC, false)
+    // console.log(Pe.length)
+    // const RplusPe = secp256k1.publicKeyTweakAdd(R, Pe.slice(1,33), false)
+    // console.log(`verify RplusPe: ${RplusPe}`)
+
+    const sG = generatorPoint.mul(ethers.utils.arrayify(s))
+    console.log(`verify sG: ${sG.encode()}`)
+
+    const P = ec.keyFromPublic(publicKey).getPublic()
+    // console.log(`verify P: ${P.encode()}`)
+    const Pe = P.mul(eC)
+    // console.log(`verify Pe: ${Pe.encode()}`)
+
+    R = ec.keyFromPublic(R).getPublic()
+    const RplusPe = R.add(Pe)
+    console.log(`verify RplusPe: ${RplusPe.encode()}`)
+
+    return sG.eq(RplusPe)
 }
 
+function test() {
+    // const wallet = ethers.Wallet.fromMnemonic("")
+    // const privateKey = ethers.utils.arrayify(wallet.privateKey);
+    const wallet = new ethers.Wallet('d6c4c7b36b37906a95e54b426332c8d919c929cf8807000fcf1cfb81b29a202e')
+
+    const privateKey = ethers.utils.arrayify(wallet.privateKey)
+    const publicKey = secp256k1.publicKeyCreate(privateKey)
+
+    const msg = 'sign me'
+    const sigResult = sign(msg, privateKey)
+
+    console.log(`hash: ${sigResult.h}`)
+    console.log(`signature: ${sigResult.s}`)
+
+    const res = verify(sigResult.s, sigResult.h, sigResult.r, publicKey)
+    console.log(`result: ${res}`)
+}
+
+test()
+
 module.exports = {
-	sign,
+    sign,
 	verify
 }
