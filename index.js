@@ -157,7 +157,8 @@ module.exports = class Schnorrkel {
       throw Error('Passed nonces are invalid');
     }
 
-    const e = this.#challenge(secp256k1.publicKeyCombine(effectiveNonces), msgHash, combinedPublicKey)
+    const R = secp256k1.publicKeyCombine(effectiveNonces);
+    const e = this.#challenge(R, msgHash, combinedPublicKey)
 
     const k = this.#nonces[x].k;
     const kTwo = this.#nonces[x].kTwo;
@@ -184,7 +185,8 @@ module.exports = class Schnorrkel {
     return {
       // s = k + xea mod(n)
       s: BigInteger.fromBuffer(final).mod(n).toBuffer(32),
-      e
+      e,
+      R
     }
   }
 

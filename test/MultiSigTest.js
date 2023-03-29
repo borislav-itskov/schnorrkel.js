@@ -1,10 +1,8 @@
 const { ethers } = require("hardhat");
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
 const DefaultSigner = require('../signers/DefaultSigner')
-const signerOne = new DefaultSigner(0);
-const signerTwo = new DefaultSigner(1);
 const Schnorrkel = require("../index")
-const schnorrkel = new Schnorrkel();
+const schnorrkel = new Schnorrkel()
 
 const {
   loadFixture,
@@ -15,10 +13,11 @@ describe("Multi Sign Tests", function () {
   async function deployContract() {
 
     // Contracts are deployed using the first signer/account by default
-    const [signer] = await ethers.getSigners();
     const SchnorrAccountAbstraction = await ethers.getContractFactory("SchnorrAccountAbstraction");
 
     // get the public key
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
     const combinedPublicAddress = schnorrkel.getCombinedAddress([
       signerOne.getPublicKey(),
       signerTwo.getPublicKey()
@@ -27,11 +26,13 @@ describe("Multi Sign Tests", function () {
     const isSigner = await contract.canSign(combinedPublicAddress);
     expect(isSigner).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
 
-    return { contract, signer };
+    return { contract };
   }
 
   it("should generate a schnorr musig2 and validate it on the blockchain", async function () {
     // deploy the contract
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
     const { contract } = await loadFixture(deployContract);
 
     const msg = 'just a test message';
@@ -61,6 +62,8 @@ describe("Multi Sign Tests", function () {
 
   it("should fail if the signer is totally different", async function () {
     // deploy the contract
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
     const { contract } = await loadFixture(deployContract);
 
     const signerThree = new DefaultSigner(2);
@@ -91,9 +94,10 @@ describe("Multi Sign Tests", function () {
 
   it("should fail if only one signature is provided", async function () {
     // deploy the contract
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
     const { contract } = await loadFixture(deployContract);
 
-    const signerTwo = new DefaultSigner(2);
     const msg = 'just a test message';
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
@@ -119,6 +123,8 @@ describe("Multi Sign Tests", function () {
 
   it("should fail if a signer tries to sign twice with the same nonce", async function () {
     // deploy the contract
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
     const { contract } = await loadFixture(deployContract);
 
     const msg = 'just a test message';
@@ -130,6 +136,8 @@ describe("Multi Sign Tests", function () {
 
   it("should fail if only one signer tries to sign the transaction providing 2 messages", async function () {
     // deploy the contract
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
     const { contract } = await loadFixture(deployContract);
 
     const msg = 'just a test message';
@@ -157,5 +165,19 @@ describe("Multi Sign Tests", function () {
     const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
     const result = await contract.isValidSignature(msgHash, sigData);
     expect(result).to.equal('0xffffffff');
+  })
+
+  it("should generate a schnorr musig2 and validate it offchain", async function () {
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
+    const msg = 'just a test message';
+    const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
+    const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
+    const combinedPublicKey = schnorrkel.getCombinedPublicKey(publicKeys)
+    const {s: sigOne, R} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+    const {s: sigTwo} = signerTwo.multiSignMessage(msg, publicKeys, publicNonces)
+    const sSummed = schnorrkel.sumSigs([sigOne, sigTwo]);
+    const result = schnorrkel.verify(sSummed, msg, R, combinedPublicKey);
+    expect(result).to.equal(true);
   })
 });
