@@ -9,33 +9,8 @@ function hashMessage(message) {
     return ethers.utils.solidityKeccak256(['string'], [message])
 }
 
-function sign(message, privateKey) {
-    const publicKey = secp256k1.publicKeyCreate(privateKey)
-    const msgHash = hashMessage(message)
-
-    const sig = signRaw(msgHash, privateKey)
-
-    const px = publicKey.slice(1, 33)
-    const parity = publicKey[0] - 2 + 27
-
-    // wrap the result
-    const abiCoder = new ethers.utils.AbiCoder()
-    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
-        px,
-        sig.e,
-        sig.s,
-        parity
-    ])
-
-
-    return {
-        h: msgHash,
-        s: sigData,
-        r: sig.R
-    }
-}
-
-function signRaw(msgHash, privateKey) {
+function sign(msg, privateKey) {
+    const hash = hashMessage(msg)
     const publicKey = secp256k1.publicKeyCreate(privateKey)
 
     // R = G * k
@@ -43,7 +18,7 @@ function signRaw(msgHash, privateKey) {
     var R = secp256k1.publicKeyCreate(k)
 
     // e = h(address(R) || compressed pubkey || m)
-    var e = challenge(R, msgHash, publicKey)
+    var e = challenge(R, hash, publicKey)
 
     // xe = x * e
     var xe = secp256k1.privateKeyTweakMul(privateKey, e)
@@ -69,35 +44,14 @@ function challenge(R, m, publicKey) {
     )
 }
 
-function verify(signature, hash, R, publicKey) {
-    const abiCoder = new ethers.utils.AbiCoder()
-    const [px, e, s, parity] = abiCoder.decode([ "bytes32", "bytes32", "bytes32", "uint8" ], signature)
-
-    console.log(`verify e decoded: ${ethers.utils.arrayify(e)}`)
+function verify(s, msg, R, publicKey) {
+    const hash = hashMessage(msg)
     const eC = challenge(R, hash, publicKey)
-    console.log(`verify e recalced: ${eC}`)
-
-    // const sG = secp256k1.publicKeyCreate(ethers.utils.arrayify(s), false)
-    // console.log(`verify sG: ${sG}`)
-
-    // console.log(R.length, publicKey.length, eC.length)
-    // const Pe = secp256k1.publicKeyTweakMul(publicKey, eC, false)
-    // console.log(Pe.length)
-    // const RplusPe = secp256k1.publicKeyTweakAdd(R, Pe.slice(1,33), false)
-    // console.log(`verify RplusPe: ${RplusPe}`)
-
     const sG = generatorPoint.mul(ethers.utils.arrayify(s))
-    console.log(`verify sG: ${sG.encode()}`)
-
     const P = ec.keyFromPublic(publicKey).getPublic()
-    // console.log(`verify P: ${P.encode()}`)
     const Pe = P.mul(eC)
-    // console.log(`verify Pe: ${Pe.encode()}`)
-
     R = ec.keyFromPublic(R).getPublic()
     const RplusPe = R.add(Pe)
-    console.log(`verify RplusPe: ${RplusPe.encode()}`)
-
     return sG.eq(RplusPe)
 }
 
@@ -111,11 +65,7 @@ function test() {
 
     const msg = 'sign me'
     const sigResult = sign(msg, privateKey)
-
-    console.log(`hash: ${sigResult.h}`)
-    console.log(`signature: ${sigResult.s}`)
-
-    const res = verify(sigResult.s, sigResult.h, sigResult.r, publicKey)
+    const res = verify(sigResult.s, msg, sigResult.R, publicKey)
     console.log(`result: ${res}`)
 }
 
