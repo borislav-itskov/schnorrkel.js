@@ -1,8 +1,8 @@
 const { ethers, config } = require("hardhat");
 const secp256k1 = require('secp256k1')
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
-const Schnorhell = require('../index.js');
-const schnorhell = new Schnorhell();
+const Schnorrkel = require('../index.js');
+const schnorrkel = new Schnorrkel();
 
 const {
   loadFixture,
@@ -46,7 +46,7 @@ describe("Single Sign Tests", function () {
 
     // sign
     const msg = 'just a test message';
-    const sig = schnorhell.sign(msg, privateKey);
+    const sig = schnorrkel.sign(msg, privateKey);
 
     // wrap the result
     const px = publicKey.slice(1, 33);
@@ -73,8 +73,8 @@ describe("Single Sign Tests", function () {
 
     // get the message
     const msg = 'just a test message';
-    const {R, s} = schnorhell.sign(msg, privateKey);
-    const result = schnorhell.verify(s, msg, R, publicKey);
+    const {R, s} = schnorrkel.sign(msg, privateKey);
+    const result = schnorrkel.verify(s, msg, R, publicKey);
     expect(result).to.equal(true);
   })
 });
