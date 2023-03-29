@@ -55,22 +55,6 @@ function verify(s, msg, R, publicKey) {
     return sG.eq(RplusPe)
 }
 
-function test() {
-    // const wallet = ethers.Wallet.fromMnemonic("")
-    // const privateKey = ethers.utils.arrayify(wallet.privateKey);
-    const wallet = new ethers.Wallet('d6c4c7b36b37906a95e54b426332c8d919c929cf8807000fcf1cfb81b29a202e')
-
-    const privateKey = ethers.utils.arrayify(wallet.privateKey)
-    const publicKey = secp256k1.publicKeyCreate(privateKey)
-
-    const msg = 'sign me'
-    const sigResult = sign(msg, privateKey)
-    const res = verify(sigResult.s, msg, sigResult.R, publicKey)
-    console.log(`result: ${res}`)
-}
-
-test()
-
 module.exports = {
     sign,
 	verify
