@@ -1,14 +1,15 @@
 const { ethers, config } = require("hardhat");
 const secp256k1 = require('secp256k1')
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
-const { sign, verify } = require('../index.js');
+const Schnorhell = require('../index.js');
+const schnorhell = new Schnorhell();
 
 const {
   loadFixture,
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai");
 
-describe("Signle Sign Tests", function () {
+describe("Single Sign Tests", function () {
 
   async function deployContract() {
     const SchnorrAccountAbstraction = await ethers.getContractFactory("SchnorrAccountAbstraction");
@@ -45,7 +46,7 @@ describe("Signle Sign Tests", function () {
 
     // sign
     const msg = 'just a test message';
-    const sig = sign(msg, privateKey);
+    const sig = schnorhell.sign(msg, privateKey);
 
     // wrap the result
     const px = publicKey.slice(1, 33);
@@ -72,8 +73,8 @@ describe("Signle Sign Tests", function () {
 
     // get the message
     const msg = 'just a test message';
-    const {R, s} = sign(msg, privateKey);
-    const result = verify(s, msg, R, publicKey);
+    const {R, s} = schnorhell.sign(msg, privateKey);
+    const result = schnorhell.verify(s, msg, R, publicKey);
     expect(result).to.equal(true);
   })
 });

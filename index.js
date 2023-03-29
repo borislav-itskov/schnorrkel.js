@@ -5,33 +5,14 @@ const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 const generatorPoint = ec.g;
 
-function hashMessage(message) {
-    return ethers.utils.solidityKeccak256(['string'], [message])
-}
+module.exports = class Schnorhell {
 
-function sign(msg, privateKey) {
-    const hash = hashMessage(msg)
-    const publicKey = secp256k1.publicKeyCreate(privateKey)
+  #hashMessage(message) {
+      return ethers.utils.solidityKeccak256(['string'], [message])
+  }
 
-    // R = G * k
-    var k = randomBytes(32)
-    var R = secp256k1.publicKeyCreate(k)
-
-    // e = h(address(R) || compressed pubkey || m)
-    var e = challenge(R, hash, publicKey)
-
-    // xe = x * e
-    var xe = secp256k1.privateKeyTweakMul(privateKey, e)
-
-    // s = k + xe
-    var s = secp256k1.privateKeyTweakAdd(k, xe)
-
-    return {R, s, e}
-}
-
-function challenge(R, m, publicKey) {
+  #challenge(R, m, publicKey) {
     // convert R to address
-    // see https://github.com/ethereum/go-ethereum/blob/eb948962704397bb861fd4c0591b5056456edd4d/crypto/crypto.go#L275
     var R_uncomp = secp256k1.publicKeyConvert(R, false);
     var R_addr = ethers.utils.arrayify(ethers.utils.keccak256(R_uncomp.slice(1, 65))).slice(12, 32)
 
@@ -44,18 +25,34 @@ function challenge(R, m, publicKey) {
     )
 }
 
-function verify(s, msg, R, publicKey) {
-    const hash = hashMessage(msg)
-    const eC = challenge(R, hash, publicKey)
-    const sG = generatorPoint.mul(ethers.utils.arrayify(s))
-    const P = ec.keyFromPublic(publicKey).getPublic()
-    const Pe = P.mul(eC)
-    R = ec.keyFromPublic(R).getPublic()
-    const RplusPe = R.add(Pe)
-    return sG.eq(RplusPe)
-}
+  sign(msg, privateKey) {
+      const hash = this.#hashMessage(msg)
+      const publicKey = secp256k1.publicKeyCreate(privateKey)
 
-module.exports = {
-    sign,
-	verify
+      // R = G * k
+      var k = randomBytes(32)
+      var R = secp256k1.publicKeyCreate(k)
+
+      // e = h(address(R) || compressed pubkey || m)
+      var e = this.#challenge(R, hash, publicKey)
+
+      // xe = x * e
+      var xe = secp256k1.privateKeyTweakMul(privateKey, e)
+
+      // s = k + xe
+      var s = secp256k1.privateKeyTweakAdd(k, xe)
+
+      return {R, s, e}
+  }
+
+  verify(s, msg, R, publicKey) {
+      const hash = this.#hashMessage(msg)
+      const eC = this.#challenge(R, hash, publicKey)
+      const sG = generatorPoint.mul(ethers.utils.arrayify(s))
+      const P = ec.keyFromPublic(publicKey).getPublic()
+      const Pe = P.mul(eC)
+      R = ec.keyFromPublic(R).getPublic()
+      const RplusPe = R.add(Pe)
+      return sG.eq(RplusPe)
+  }
 }
