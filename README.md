@@ -1,92 +1,190 @@
-# schnorr-signatures
+# Schnorr Signatures
+JavaScript library for signing and verifying Schnorr Signatures.  
+It can be used for single and multi signatures.  
+Blockchain validation via ecrecover is also supported.
 
+## Requirements:
 
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/dev-labs-bg/schnorr-signatures.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.com/dev-labs-bg/schnorr-signatures/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+* Node.js v16.x.x
+* npm (Node.js package manager) v9.x.x
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+
+TO DO: explain how to install the package
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Single Signatures
+We reffer to Single Signatures as ones that have a single signer.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Sign:
+```
+const Schnorrkel = require('schnorrkel')
+const schnorrkel = new Schnorrkel()
+const privateKey: Uint8Array = '...'
+const msg = 'a message'
+const {R, s} = schnorrkel.sign(msg, privateKey)
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+Offchain verification:
+```
+const publicKey: Uint8Array = ... (derived from the privateKey)
+// s and R come from the signature
+const result = schnorrkel.verify(s, msg, R, publicKey)
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Onchain verification:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+First, you will need a contract that verifies schnorr. We have it in the repository and it is called `SchnorrAccountAbstraction`.  
+But all in all, you need this onchain:
+```
+function verifySchnorr(bytes32 hash, bytes memory sig) internal pure returns (bool) {
+    // px := public key x-coord
+    // e := schnorr signature challenge
+    // s := schnorr signature
+    // parity := public key y-coord parity (27 or 28)
+    (bytes32 px, bytes32 e, bytes32 s, uint8 parity) = abi.decode(sig, (bytes32, bytes32, bytes32, uint8));
+    // ecrecover = (m, v, r, s);
+    bytes32 sp = bytes32(Q - mulmod(uint256(s), uint256(px), Q));
+    bytes32 ep = bytes32(Q - mulmod(uint256(e), uint256(px), Q));
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+    require(sp != 0);
+    // the ecrecover precompile implementation checks that the `r` and `s`
+    // inputs are non-zero (in this case, `px` and `ep`), thus we don't need to
+    // check if they're zero.
+    address R = ecrecover(sp, parity, px, ep);
+    require(R != address(0), "ecrecover failed");
+    return e == keccak256(abi.encodePacked(R, uint8(parity), px, hash));
+}
+```
 
-## License
-For open source projects, say how it is licensed.
+We explain how ecrecover works and why it is needed later [in this document](#ecrecover).  
+Let's send a request to this contract via hardhat:
+```
+const { ethers } = require("hardhat");
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+const SchnorrAccountAbstraction = await ethers.getContractFactory("SchnorrAccountAbstraction");
+const contract = await SchnorrAccountAbstraction.deploy();
+const privateKey: Uint8Array = '...'
+const publicKey: Uint8Array = ... (derived from the privateKey)
+const msg = 'just a test message';
+const sig = schnorrkel.sign(msg, privateKey);
+
+// wrap the result
+const px = publicKey.slice(1, 33);
+const parity = publicKey[0] - 2 + 27;
+const abiCoder = new ethers.utils.AbiCoder();
+const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    px,
+    sig.e,
+    sig.s,
+    parity
+]);
+const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
+const result = await contract.isValidSignature(msgHash, sigData);
+```
+
+You can find reference to this in `tests/SingleSignTest.js` in this repository.
+
+### Multisig
+
+Schnorr multisignatures work on the basis n/n - all of the signers need to sign in order for the signature to be valid.  
+Below are all the steps needed to craft a successful multisig.
+
+#### Public nonces
+
+Public nonces need to be exchanged between signers before they sign. Normally, the Signer should implement this library as define a `getPublicNonces` method that will call the library and return the nonces. For our test example, we're going to call the schnorrkel library directly:
+
+```
+const privateKey1: Uint8Array = '...'
+const privateKey2: Uint8Array = '...'
+const publicNonces1 = schnorrkel.generatePublicNonces(privateKey1);
+const publicNonces2 = schnorrkel.generatePublicNonces(privateKey2);
+```
+
+Again, this isn't how the flow is supposed to work. A signer needs to implement the library and when `getPublicNonces` is called, the user should be ask whether he is okay to generate and give his public nonces.
+
+#### sign
+
+After we have them, here is how to sign:
+
+```
+const publicKey1: Uint8Array = '...'
+const publicKey2: Uint8Array = '...'
+const publicKeys = [publicKey1, publicKey2];
+const combinedPublicKey = schnorrkel.getCombinedPublicKey(publicKeys)
+const {s: sigOne, e, R} = schnorrkel.multiSigSign(privateKey1, msg, publicKeys, publicNonces)
+const {s: sigTwo} = schnorrkel.multiSigSign(privateKey2, msg, publicKeys, publicNonces)
+const sSummed = schnorrkel.sumSigs([sigOne, sigTwo]);
+```
+
+#### verify onchain
+
+```
+const px = combinedPublicKey.slice(1,33);
+const parity = combinedPublicKey[0] - 2 + 27;
+const abiCoder = new ethers.utils.AbiCoder();
+const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    px,
+    e,
+    sSummed,
+    parity
+]);
+const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
+const result = await contract.isValidSignature(msgHash, sigData);
+```
+
+#### verify offchain
+
+```
+const result = schnorrkel.verify(sSummed, msg, R, combinedPublicKey);
+```
+
+You can find reference to this in `tests/MultiSigTest.js` in this repository.
+
+## ecrecover
+We utilize Ethereum ecrecover to verify the signature. This is how it works:  
+Ethereum ecrecover returns an address (hash of public key) given an ECDSA signature.
+Given message m and ECDSA signature (v, r, s) where v denotes the parity of the y-coordinate for the point where x-coordinate r
+
+```
+ecrecover(m, v, r, s):
+R = point derived from r and v
+a = -G*m
+b = R*s
+Qr = a + b
+Q = Qr * (1/r)
+Q = (1/r) * (R*s - G*m) //recovered pubkey
+```
+
+Ethereum’s ecrecover returns the last 20 bytes of the keccak256 hash of the 64-byte public key.
+Given signature (R, s), message m and public key P we can feed values into ecrecover such that the returned address can be used in a comparison to the challenge.
+
+```
+calculate e = H(address(R) || m) and P_x = x-coordinate of P
+```
+
+pass:
+```
+m = -s*P_x
+v = parity of P
+r = x-coordinate of P
+s = -e*P_x
+```
+
+then:
+
+```
+ecrecover(m=-s*P_x, v=0/1, r=P_x, s=-e*P_x):
+P = point derived from r and v (public key)
+a = -G*(-s*P_x) = G*s*P_x
+b = P*(-m*P_x) = -P*e*P_x
+Q = (1/P_x) (a+b)
+Q = (1/P_x)(G*s*P_x - P*e*P_x)
+Q = G*s - P*e  // same as schnorr verify above
+```
+
+the returned value is address(Q).
+
+* calculate e' = h(address(Q) || m)
+* check e' == e to verify the signature.
