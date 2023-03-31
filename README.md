@@ -10,12 +10,16 @@ Blockchain validation via ecrecover is also supported.
 
 ## Installation
 
-TO DO: explain how to install the package
+```
+git clone https://github.com/borislav-itskov/schnorrkel.js
+cd schnorrkel.js
+npm i --dev
+```
 
 ## Usage
 
 ### Single Signatures
-We reffer to Single Signatures as ones that have a single signer.
+We refer to Single Signatures as ones that have a single signer.
 
 Sign:
 ```
