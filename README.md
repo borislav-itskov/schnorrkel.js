@@ -16,6 +16,11 @@ cd schnorrkel.js
 npm i --dev
 ```
 
+### Testing
+```
+npm run test
+```
+
 ## Usage
 
 ### Single Signatures
