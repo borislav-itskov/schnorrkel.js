@@ -1,5 +1,5 @@
 {
-  "name": "schnorrkel.js",
+  "name": "@borislav.itskov/schnorrkel.js",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
