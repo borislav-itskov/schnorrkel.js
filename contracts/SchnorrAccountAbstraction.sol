@@ -2,21 +2,24 @@
 pragma solidity ^0.8.7;
 
 contract SchnorrAccountAbstraction {
-    uint256 constant internal Q = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
+	uint256 constant internal Q = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
 
-    bytes4 constant internal ERC1271_MAGICVALUE_BYTES32 = 0x1626ba7e;
+	bytes4 constant internal ERC1271_MAGICVALUE_BYTES32 = 0x1626ba7e;
 
-    mapping (address => bytes32) public canSign;
+	mapping (address => bytes32) public canSign;
+	address public entryPoint;
+	uint public nonce;
 
-    // add the combined multisig key on deploy
-	constructor(address[] memory addrs) {
+	// add the combined multisig key on deploy
+	constructor(address _entryPoint, address[] memory addrs) {
+		entryPoint = _entryPoint;
 		uint len = addrs.length;
 		for (uint i=0; i<len; i++) {
 			canSign[addrs[i]] = bytes32(uint(1));
 		}
 	}
 
-    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4) {
+	function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4) {
 		if (canSign[_verifySchnorr(hash, signature)] != bytes32(0)) {
 			return ERC1271_MAGICVALUE_BYTES32;
 		} else {
@@ -24,7 +27,7 @@ contract SchnorrAccountAbstraction {
 		}
 	}
 
-    function _verifySchnorr(bytes32 hash, bytes memory sig) internal pure returns (address) {
+	function _verifySchnorr(bytes32 hash, bytes memory sig) internal pure returns (address) {
 		// px := public key x-coord
 		// e := schnorr signature challenge
 		// s := schnorr signature
@@ -43,5 +46,25 @@ contract SchnorrAccountAbstraction {
 		return e == keccak256(abi.encodePacked(R, uint8(parity), px, hash))
 			? address(uint160(uint256(px)))
 			: address(0);
+	}
+
+
+	// ERC-4337 implementation
+	struct Call {
+		address to;
+		uint value;
+		bytes data;
+		uint gasLimit;
+	}
+
+	function execute(Call[] calldata calls) external {
+		uint len = calls.length;
+		for (uint i=0; i<len; i++) {
+			(bool success, bytes memory err) = calls[i].to.call{ gas: calls[i].gasLimit, value: calls[i].value }(calls[i].data);
+			if (!success) {
+				uint errLen = err.length;
+				assembly { revert(add(err, 0x20), errLen) }
+			}
+		}
 	}
 }
