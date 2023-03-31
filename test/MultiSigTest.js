@@ -10,6 +10,7 @@ const {
 const { expect } = require("chai");
 
 describe("Multi Sign Tests", function () {
+  const entryPoint = "0x0000000000000000000000000000000000000000";
   async function deployContract() {
 
     // Contracts are deployed using the first signer/account by default
@@ -22,7 +23,7 @@ describe("Multi Sign Tests", function () {
       signerOne.getPublicKey(),
       signerTwo.getPublicKey()
     ]);
-    const contract = await SchnorrAccountAbstraction.deploy([combinedPublicAddress]);
+    const contract = await SchnorrAccountAbstraction.deploy(entryPoint, [combinedPublicAddress]);
     const isSigner = await contract.canSign(combinedPublicAddress);
     expect(isSigner).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
 

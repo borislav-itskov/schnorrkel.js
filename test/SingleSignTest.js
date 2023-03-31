@@ -10,7 +10,7 @@ const {
 const { expect } = require("chai");
 
 describe("Single Sign Tests", function () {
-
+  const entryPoint = "0x0000000000000000000000000000000000000000";
   async function deployContract() {
     const SchnorrAccountAbstraction = await ethers.getContractFactory("SchnorrAccountAbstraction");
 
@@ -27,7 +27,7 @@ describe("Single Sign Tests", function () {
     const address = "0x" + pxGeneratedAddress.slice(pxGeneratedAddress.length - 40, pxGeneratedAddress.length);
 
     // deploying the contract
-    const contract = await SchnorrAccountAbstraction.deploy([address]);
+    const contract = await SchnorrAccountAbstraction.deploy(entryPoint, [address]);
     const isSigner = await contract.canSign(address);
     expect(isSigner).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
 
