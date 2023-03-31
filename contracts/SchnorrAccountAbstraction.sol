@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity ^0.8.7;
 
+import "./interfaces/UserOperation.sol";
+
 contract SchnorrAccountAbstraction {
 	uint256 constant internal Q = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
 
@@ -58,6 +60,8 @@ contract SchnorrAccountAbstraction {
 	}
 
 	function execute(Call[] calldata calls) external {
+		require(msg.sender == entryPoint, "account: not from entrypoint");
+
 		uint len = calls.length;
 		for (uint i=0; i<len; i++) {
 			(bool success, bytes memory err) = calls[i].to.call{ gas: calls[i].gasLimit, value: calls[i].value }(calls[i].data);
@@ -66,5 +70,32 @@ contract SchnorrAccountAbstraction {
 				assembly { revert(add(err, 0x20), errLen) }
 			}
 		}
+	}
+
+
+	// return value in case of signature failure, with no time-range.
+	// equivalent to packSigTimeRange(true,0,0);
+	uint256 constant internal SIG_VALIDATION_FAILED = 1;
+
+	function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds) external
+		returns (uint256 sigTimeRange)
+	{
+		require(msg.sender == entryPoint, "account: not from entrypoint");
+		address signer = _verifySchnorr(userOpHash, userOp.signature);
+		if (canSign[signer] == bytes32(0)) {
+			sigTimeRange = SIG_VALIDATION_FAILED;
+		}
+
+		if (userOp.initCode.length == 0) {
+			require(nonce++ == userOp.nonce, "account: invalid nonce");
+		}
+
+		if (missingAccountFunds > 0) {
+			// TODO: MAY pay more than the minimum, to deposit for future transactions
+			(bool success,) = payable(msg.sender).call{value : missingAccountFunds}("");
+			(success);
+			// ignore failure (its EntryPoint's job to verify, not account.)
+		}
+		return 0; // always return 0 as this function doesn't support time based validation
 	}
 }
