@@ -152,6 +152,8 @@ const result = schnorrkel.verify(sSummed, msg, R, combinedPublicKey);
 You can find reference to this in `tests/MultiSigTest.js` in this repository.
 
 ## ecrecover
+For the schnorr on-chain verification, we were inspired by the work of [noot](https://github.com/noot). Without his work, it would've required a lot more time for RnD to reach this point. You can take a look at his repository [here](https://github.com/noot/schnorr-verify)
+
 We utilize Ethereum ecrecover to verify the signature. This is how it works:  
 Ethereum ecrecover returns an address (hash of public key) given an ECDSA signature.
 Given message m and ECDSA signature (v, r, s) where v denotes the parity of the y-coordinate for the point where x-coordinate r
