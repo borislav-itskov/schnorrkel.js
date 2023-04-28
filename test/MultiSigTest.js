@@ -181,4 +181,35 @@ describe("Multi Sign Tests", function () {
     const result = schnorrkel.verify(sSummed, msg, R, combinedPublicKey);
     expect(result).to.equal(true);
   })
+
+  it("should successfully pass even if the order of the public keys is different", async function () {
+    // deploy the contract
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
+    const { contract } = await loadFixture(deployContract);
+
+    const msg = 'just a test message';
+    const publicKeys = [signerTwo.getPublicKey(), signerOne.getPublicKey()]
+    const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
+    const combinedPublicKey = schnorrkel.getCombinedPublicKey(publicKeys)
+    const {s: sigOne, e} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+    const {s: sigTwo} = signerTwo.multiSignMessage(msg, publicKeys, publicNonces)
+    const sSummed = schnorrkel.sumSigs([sigOne, sigTwo]);
+
+    // the multisig px and parity
+    const px = combinedPublicKey.slice(1,33);
+    const parity = combinedPublicKey[0] - 2 + 27;
+
+    // wrap the result
+    const abiCoder = new ethers.utils.AbiCoder();
+    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+      px,
+      e,
+      sSummed,
+      parity
+    ]);
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
+    const result = await contract.isValidSignature(msgHash, sigData);
+    expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32);
+  })
 });

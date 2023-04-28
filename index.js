@@ -31,6 +31,10 @@ module.exports = class Schnorrkel {
     }
   }
 
+  #generateL(publicKeys) {
+    return ethers.utils.keccak256(this.#concatTypedArrays(publicKeys.sort()));
+  }
+
   #aCoefficient(publicKey, L) {
     return ethers.utils.arrayify(ethers.utils.solidityKeccak256(
       ["bytes", "bytes"],
@@ -92,7 +96,7 @@ module.exports = class Schnorrkel {
   }
 
   getCombinedPublicKey(publicKeys) {
-    const L = this.#concatTypedArrays(publicKeys);
+    const L = this.#generateL(publicKeys)
 
     const modifiedKeys = publicKeys.map(publicKey => {
       return secp256k1.publicKeyTweakMul(publicKey, this.#aCoefficient(publicKey, L));
@@ -139,7 +143,7 @@ module.exports = class Schnorrkel {
     }
 
     const publicKey = secp256k1.publicKeyCreate(x)
-    const L = this.#concatTypedArrays(publicKeys);
+    const L = this.#generateL(publicKeys)
     const combinedPublicKey = this.getCombinedPublicKey(publicKeys);
     const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
     const a = this.#aCoefficient(publicKey, L);
