@@ -52,7 +52,7 @@ module.exports = class Schnorrkel {
   }
 
   #hashMessage(message) {
-      return ethers.utils.solidityKeccak256(['string'], [message])
+    return ethers.utils.solidityKeccak256(['string'], [message])
   }
 
   #challenge(R, m, publicKey) {
@@ -62,10 +62,10 @@ module.exports = class Schnorrkel {
 
     // e = keccak256(address(R) || compressed publicKey || m)
     return ethers.utils.arrayify(
-        ethers.utils.solidityKeccak256(
-            ["address", "uint8", "bytes32", "bytes32"],
-            [R_addr, publicKey[0] + 27 - 2, publicKey.slice(1, 33), m]
-        )
+      ethers.utils.solidityKeccak256(
+        ["address", "uint8", "bytes32", "bytes32"],
+        [R_addr, publicKey[0] + 27 - 2, publicKey.slice(1, 33), m]
+      )
     )
   }
 
@@ -75,18 +75,17 @@ module.exports = class Schnorrkel {
     return c;
   }
 
-  #areBuffersSame(buf1, buf2)
-  {
-      if (buf1.byteLength != buf2.byteLength) return false;
+  #areBuffersSame(buf1, buf2) {
+    if (buf1.byteLength != buf2.byteLength) return false;
 
-      var dv1 = new Int8Array(buf1);
-      var dv2 = new Int8Array(buf2);
-      for (var i = 0 ; i != buf1.byteLength ; i++)
-      {
-          if (dv1[i] != dv2[i]) return false;
-      }
+    var dv1 = new Int8Array(buf1);
+    var dv2 = new Int8Array(buf2);
+    for (var i = 0 ; i != buf1.byteLength ; i++)
+    {
+        if (dv1[i] != dv2[i]) return false;
+    }
 
-      return true;
+    return true;
   }
 
   generatePublicNonces(x) {
@@ -111,23 +110,23 @@ module.exports = class Schnorrkel {
   }
 
   sign(msg, privateKey) {
-      const hash = this.#hashMessage(msg)
-      const publicKey = secp256k1.publicKeyCreate(privateKey)
+    const hash = this.#hashMessage(msg)
+    const publicKey = secp256k1.publicKeyCreate(privateKey)
 
-      // R = G * k
-      var k = ethers.utils.randomBytes(32)
-      var R = secp256k1.publicKeyCreate(k)
+    // R = G * k
+    var k = ethers.utils.randomBytes(32)
+    var R = secp256k1.publicKeyCreate(k)
 
-      // e = h(address(R) || compressed pubkey || m)
-      var e = this.#challenge(R, hash, publicKey)
+    // e = h(address(R) || compressed pubkey || m)
+    var e = this.#challenge(R, hash, publicKey)
 
-      // xe = x * e
-      var xe = secp256k1.privateKeyTweakMul(privateKey, e)
+    // xe = x * e
+    var xe = secp256k1.privateKeyTweakMul(privateKey, e)
 
-      // s = k + xe
-      var s = secp256k1.privateKeyTweakAdd(k, xe)
+    // s = k + xe
+    var s = secp256k1.privateKeyTweakAdd(k, xe)
 
-      return {R, s, e}
+    return {R, s, e}
   }
 
   // publicNonces = [
@@ -203,13 +202,13 @@ module.exports = class Schnorrkel {
   }
 
   verify(s, msg, R, publicKey) {
-      const hash = this.#hashMessage(msg)
-      const eC = this.#challenge(R, hash, publicKey)
-      const sG = generatorPoint.mul(ethers.utils.arrayify(s))
-      const P = ec.keyFromPublic(publicKey).getPublic()
-      const Pe = P.mul(eC)
-      R = ec.keyFromPublic(R).getPublic()
-      const RplusPe = R.add(Pe)
-      return sG.eq(RplusPe)
+    const hash = this.#hashMessage(msg)
+    const eC = this.#challenge(R, hash, publicKey)
+    const sG = generatorPoint.mul(ethers.utils.arrayify(s))
+    const P = ec.keyFromPublic(publicKey).getPublic()
+    const Pe = P.mul(eC)
+    R = ec.keyFromPublic(R).getPublic()
+    const RplusPe = R.add(Pe)
+    return sG.eq(RplusPe)
   }
 }
