@@ -1,6 +1,5 @@
 const { ethers } = require('ethers')
 const secp256k1 = require('secp256k1')
-const { randomBytes } = require('crypto');
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 const generatorPoint = ec.g;
@@ -18,8 +17,8 @@ module.exports = class Schnorrkel {
   }
 
   #setNonces(x) {
-    const k = randomBytes(32);
-    const kTwo = randomBytes(32);
+    const k = ethers.utils.randomBytes(32);
+    const kTwo = ethers.utils.randomBytes(32);
     const kPublic = secp256k1.publicKeyCreate(k)
     const kTwoPublic = secp256k1.publicKeyCreate(kTwo)
 
@@ -116,7 +115,7 @@ module.exports = class Schnorrkel {
       const publicKey = secp256k1.publicKeyCreate(privateKey)
 
       // R = G * k
-      var k = randomBytes(32)
+      var k = ethers.utils.randomBytes(32)
       var R = secp256k1.publicKeyCreate(k)
 
       // e = h(address(R) || compressed pubkey || m)
