@@ -1,5 +1,6 @@
-const { ethers, config } = require("hardhat");
-const Schnorrkel = require("../index")
+import { config, ethers } from "hardhat";
+import { Schnorrkel } from "..";
+
 const schnorrkel = new Schnorrkel();
 const secp256k1 = require('secp256k1')
 
@@ -14,7 +15,7 @@ module.exports = class DefaultSigner {
   }
 
   #generatePrivateKey(index) {
-    const accounts = config.networks.hardhat.accounts
+    const accounts: any = config.networks.hardhat.accounts
     const wallet = ethers.Wallet.fromMnemonic(accounts.mnemonic, accounts.path + `/${index}`)
     return ethers.utils.arrayify(wallet.privateKey);
   }
@@ -28,7 +29,6 @@ module.exports = class DefaultSigner {
   }
 
   multiSignMessage(msg, publicKeys, publicNonces) {
-    const x  = this.#privateKey;
-    return schnorrkel.multiSigSign(x, msg, publicKeys, publicNonces);
+    return schnorrkel.multiSigSign(this.#privateKey, msg, publicKeys, publicNonces);
   }
 }

@@ -1,28 +1,48 @@
-const { ethers } = require('ethers')
-const secp256k1 = require('secp256k1')
-const EC = require('elliptic').ec;
+import { ethers } from 'ethers';
+import ecurve from 'ecurve';
+import secp256k1 from 'secp256k1'
+import elliptic from 'elliptic';
+
+const EC = elliptic.ec;
 const ec = new EC('secp256k1');
 const generatorPoint = ec.g;
-const BigInteger = require('bigi')
 
-const ecurve = require('ecurve');
+let bigi: any = null;
+function getBigi(): any {
+  if (!bigi) {
+    bigi = require("bigi");
+  }
+  return bigi;
+}
+
 const curve = ecurve.getCurveByName('secp256k1');
-const n = curve.n
+const n = curve?.n
 
-module.exports = class Schnorrkel {
-  #nonces = {};
+interface NoncePairs {
+  readonly k: Uint8Array,
+  readonly kTwo: Uint8Array,
+  readonly kPublic: Uint8Array,
+  readonly kTwoPublic: Uint8Array,
+}
 
-  #clearNonces(x) {
-    this.#nonces[x] = {}
+interface Nonces {
+  [key: string]: NoncePairs
+}
+
+export class Schnorrkel {
+  #nonces: Nonces = {};
+
+  #clearNonces(x: Uint8Array) {
+    delete this.#nonces[ethers.utils.keccak256(x)]
   }
 
-  #setNonces(x) {
+  #setNonces(x: Uint8Array) {
     const k = ethers.utils.randomBytes(32);
     const kTwo = ethers.utils.randomBytes(32);
     const kPublic = secp256k1.publicKeyCreate(k)
     const kTwoPublic = secp256k1.publicKeyCreate(kTwo)
 
-    this.#nonces[x] = {
+    this.#nonces[ethers.utils.keccak256(x)] = {
       k,
       kTwo,
       kPublic,
@@ -36,7 +56,7 @@ module.exports = class Schnorrkel {
 
   #aCoefficient(publicKey, L) {
     return ethers.utils.arrayify(ethers.utils.solidityKeccak256(
-      ["bytes", "bytes"],
+      ['bytes', 'bytes'],
       [L, publicKey]
     ));
   }
@@ -46,7 +66,7 @@ module.exports = class Schnorrkel {
     const kPublicNonces = secp256k1.publicKeyCombine(arrayColumn(publicNonces, 0));
     const kTwoPublicNonces = secp256k1.publicKeyCombine(arrayColumn(publicNonces, 1));
     return ethers.utils.arrayify(ethers.utils.solidityKeccak256(
-      ["bytes", "bytes32", "bytes", "bytes"],
+      ['bytes', 'bytes32', 'bytes', 'bytes'],
       [combinedPublicKey, msgHash, kPublicNonces, kTwoPublicNonces]
     ));
   }
@@ -63,7 +83,7 @@ module.exports = class Schnorrkel {
     // e = keccak256(address(R) || compressed publicKey || m)
     return ethers.utils.arrayify(
       ethers.utils.solidityKeccak256(
-        ["address", "uint8", "bytes32", "bytes32"],
+        ['address', 'uint8', 'bytes32', 'bytes32'],
         [R_addr, publicKey[0] + 27 - 2, publicKey.slice(1, 33), m]
       )
     )
@@ -88,9 +108,10 @@ module.exports = class Schnorrkel {
     return true;
   }
 
-  generatePublicNonces(x) {
+  generatePublicNonces(x: Uint8Array) {
     this.#setNonces(x)
-    return [this.#nonces[x].kPublic, this.#nonces[x].kTwoPublic]
+    const xHashed = ethers.utils.keccak256(x)
+    return [this.#nonces[xHashed].kPublic, this.#nonces[xHashed].kTwoPublic]
   }
 
   getCombinedPublicKey(publicKeys) {
@@ -106,12 +127,12 @@ module.exports = class Schnorrkel {
   getCombinedAddress(publicKeys) {
     const combinedPublicKey = this.getCombinedPublicKey(publicKeys)
     const px = ethers.utils.hexlify(combinedPublicKey.slice(1,33))
-    return "0x" + px.slice(px.length - 40, px.length)
+    return '0x' + px.slice(px.length - 40, px.length)
   }
 
-  sign(msg, privateKey) {
+  sign(msg: string, x: Uint8Array) {
     const hash = this.#hashMessage(msg)
-    const publicKey = secp256k1.publicKeyCreate(privateKey)
+    const publicKey = secp256k1.publicKeyCreate((x as any))
 
     // R = G * k
     var k = ethers.utils.randomBytes(32)
@@ -121,7 +142,7 @@ module.exports = class Schnorrkel {
     var e = this.#challenge(R, hash, publicKey)
 
     // xe = x * e
-    var xe = secp256k1.privateKeyTweakMul(privateKey, e)
+    var xe = secp256k1.privateKeyTweakMul((x as any), e)
 
     // s = k + xe
     var s = secp256k1.privateKeyTweakAdd(k, xe)
@@ -135,8 +156,9 @@ module.exports = class Schnorrkel {
   //   [k, ktwo], // for signer 3
   //   ...
   // ]
-  multiSigSign(x, msg, publicKeys, publicNonces) {
-    if (!(x in this.#nonces) || Object.keys(this.#nonces[x]).length === 0) {
+  multiSigSign(x: Uint8Array, msg, publicKeys, publicNonces) {
+    const xHashed = ethers.utils.keccak256(x)
+    if (!(xHashed in this.#nonces) || Object.keys(this.#nonces[xHashed]).length === 0) {
       throw Error('Nonces should be exchanged before signing');
     }
 
@@ -151,8 +173,8 @@ module.exports = class Schnorrkel {
       return secp256k1.publicKeyCombine([batch[0], secp256k1.publicKeyTweakMul(batch[1], b)])
     })
     const signerEffectiveNonce = secp256k1.publicKeyCombine([
-      this.#nonces[x].kPublic,
-      secp256k1.publicKeyTweakMul(this.#nonces[x].kTwoPublic, b)
+      this.#nonces[xHashed].kPublic,
+      secp256k1.publicKeyTweakMul(this.#nonces[xHashed].kTwoPublic, b)
     ])
     const inArray = effectiveNonces.filter(nonce => this.#areBuffersSame(nonce, signerEffectiveNonce)).length != 0;
     if (! inArray) {
@@ -162,8 +184,8 @@ module.exports = class Schnorrkel {
     const R = secp256k1.publicKeyCombine(effectiveNonces);
     const e = this.#challenge(R, msgHash, combinedPublicKey)
 
-    const k = this.#nonces[x].k;
-    const kTwo = this.#nonces[x].kTwo;
+    const k = this.#nonces[xHashed].k;
+    const kTwo = this.#nonces[xHashed].kTwo;
 
     // xe = x * e
     const xe = secp256k1.privateKeyTweakMul(x, e);
@@ -186,17 +208,17 @@ module.exports = class Schnorrkel {
 
     return {
       // s = k + xea mod(n)
-      s: BigInteger.fromBuffer(final).mod(n).toBuffer(32),
+      s: getBigi().fromBuffer(final).mod(n).toBuffer(32),
       e,
       R
     }
   }
 
   sumSigs(sigs) {
-    var combined = BigInteger.fromBuffer(sigs[0]);
+    var combined = getBigi().fromBuffer(sigs[0]);
     sigs.shift();
     sigs.map(sig => {
-      combined = combined.add(BigInteger.fromBuffer(sig));
+      combined = combined.add(getBigi().fromBuffer(sig));
     })
     return combined.mod(n).toBuffer(32);
   }

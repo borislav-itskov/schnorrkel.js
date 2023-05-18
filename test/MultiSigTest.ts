@@ -1,8 +1,9 @@
+import { Schnorrkel } from "..";
+const schnorrkel = new Schnorrkel()
+
 const { ethers } = require("hardhat");
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
 const DefaultSigner = require('../signers/DefaultSigner')
-const Schnorrkel = require("../index")
-const schnorrkel = new Schnorrkel()
 
 const {
   loadFixture,
