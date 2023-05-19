@@ -1,7 +1,11 @@
 # Schnorr Signatures
 JavaScript library for signing and verifying Schnorr Signatures.  
 It can be used for single and multi signatures.  
-Blockchain validation via ecrecover is also supported.
+Blockchain validation via ecrecover is also supported.  
+
+# Typescript support
+Version 1.1.0 ports the javascript code to typescript. It also comes with some breaking changes in comparison with 1.0.2.  
+You could review these changes [here](https://github.com/borislav-itskov/schnorrkel.js/pull/1)
 
 ## Requirements:
 
@@ -13,7 +17,7 @@ Blockchain validation via ecrecover is also supported.
 ```
 git clone https://github.com/borislav-itskov/schnorrkel.js
 cd schnorrkel.js
-npm i --dev
+npm i
 ```
 
 ### Testing
@@ -29,6 +33,7 @@ We refer to Single Signatures as ones that have a single signer.
 Sign:
 ```
 const Schnorrkel = require('schnorrkel')
+// import Schnorrkel from 'schnorrkel' for typescript
 const schnorrkel = new Schnorrkel()
 const privateKey: Uint8Array = '...'
 const msg = 'a message'
