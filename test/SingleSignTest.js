@@ -1,7 +1,7 @@
 const { ethers, config } = require("hardhat");
 const secp256k1 = require('secp256k1')
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
-const Schnorrkel = require('../index.js');
+const { Schnorrkel } = require("..");
 const schnorrkel = new Schnorrkel();
 
 const {
