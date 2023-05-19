@@ -46,7 +46,7 @@ describe("Single Sign Tests", function () {
 
     // sign
     const msg = 'just a test message';
-    const sig = schnorrkel.sign(msg, privateKey);
+    const sig = schnorrkel.sign(privateKey, msg);
 
     // wrap the result
     const px = publicKey.slice(1, 33);
@@ -73,7 +73,7 @@ describe("Single Sign Tests", function () {
 
     // get the message
     const msg = 'just a test message';
-    const {R, s} = schnorrkel.sign(msg, privateKey);
+    const {R, s} = schnorrkel.sign(privateKey, msg);
     const result = schnorrkel.verify(s, msg, R, publicKey);
     expect(result).to.equal(true);
   })

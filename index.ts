@@ -34,6 +34,12 @@ interface Nonces {
   [key: string]: NoncePairs
 }
 
+interface Signature {
+  R: Uint8Array, // the final public nonce
+  e: Uint8Array, // the schnorr challenge
+  s: Uint8Array, // the signature
+}
+
 export class Schnorrkel {
   #nonces: Nonces = {};
 
@@ -70,6 +76,7 @@ export class Schnorrkel {
     const arrayColumn = (arr: Array<PublicNonces>, n: string) => arr.map(x => x[n]);
     const kPublicNonces = secp256k1.publicKeyCombine(arrayColumn(publicNonces, 'kPublic'));
     const kTwoPublicNonces = secp256k1.publicKeyCombine(arrayColumn(publicNonces, 'kTwoPublic'));
+
     return ethers.utils.arrayify(ethers.utils.solidityKeccak256(
       ['bytes', 'bytes32', 'bytes', 'bytes'],
       [combinedPublicKey, msgHash, kPublicNonces, kTwoPublicNonces]
@@ -143,7 +150,7 @@ export class Schnorrkel {
     return '0x' + px.slice(px.length - 40, px.length)
   }
 
-  sign(msg: string, x: Uint8Array) {
+  sign(x: Uint8Array, msg: string): Signature {
     const hash = this.#hashMessage(msg)
     const publicKey = secp256k1.publicKeyCreate((x as any))
 
@@ -163,7 +170,9 @@ export class Schnorrkel {
     return {R, s, e}
   }
 
-  multiSigSign(x: Uint8Array, msg: string, publicKeys: Uint8Array[], publicNonces: PublicNonces[]) {
+  multiSigSign(x: Uint8Array, msg: string, publicKeys: Uint8Array[], publicNonces: PublicNonces[]): Signature {
+    if (publicKeys.length < 2) throw Error('At least 2 public keys should be provided')
+
     const xHashed = ethers.utils.keccak256(x)
     if (!(xHashed in this.#nonces) || Object.keys(this.#nonces[xHashed]).length === 0) {
       throw Error('Nonces should be exchanged before signing');
@@ -221,7 +230,7 @@ export class Schnorrkel {
     }
   }
 
-  sumSigs(sigs: string[]) {
+  sumSigs(sigs: string[]): string {
     var combined = getBigi().fromBuffer(sigs[0]);
     sigs.shift();
     sigs.map(sig => {
@@ -230,7 +239,7 @@ export class Schnorrkel {
     return combined.mod(n).toBuffer(32);
   }
 
-  verify(s: string, msg: string, R: Uint8Array, publicKey: Uint8Array) {
+  verify(s: string, msg: string, R: Uint8Array, publicKey: Uint8Array): boolean {
     const hash = this.#hashMessage(msg)
     const eC = this.#challenge(R, hash, publicKey)
     const sG = generatorPoint.mul(ethers.utils.arrayify(s))

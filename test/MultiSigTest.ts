@@ -4,6 +4,9 @@ const schnorrkel = new Schnorrkel()
 const { ethers } = require("hardhat");
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
 const DefaultSigner = require('../signers/DefaultSigner')
+import chai from 'chai';
+import chaiAssertionsCount from 'chai-assertions-count';
+chai.use(chaiAssertionsCount);
 
 const {
   loadFixture,
@@ -212,5 +215,31 @@ describe("Multi Sign Tests", function () {
     const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
     const result = await contract.isValidSignature(msgHash, sigData);
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32);
+  })
+
+  it("should throw error requirements for public keys when generating nonces and multi singatures", async function () {
+    chai.Assertion.expectExpects(3);
+    const signerOne = new DefaultSigner(0);
+    const signerTwo = new DefaultSigner(1);
+
+    try {
+      schnorrkel.getCombinedPublicKey([signerTwo.getPublicKey()])
+    } catch (e: any) {
+      expect(e.message).to.equal('At least 2 public keys should be provided')
+    }
+    try {
+      schnorrkel.getCombinedAddress([signerOne.getPublicKey()]);
+    } catch (e: any) {
+      expect(e.message).to.equal('At least 2 public keys should be provided')
+    }
+
+    const msg = 'just a test message';
+    const publicKeys = [signerOne.getPublicKey()]
+    const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
+    try {
+      signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+    } catch (e: any) {
+      expect(e.message).to.equal('At least 2 public keys should be provided')
+    }
   })
 });
