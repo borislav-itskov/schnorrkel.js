@@ -1,24 +1,19 @@
-import { Schnorrkel } from "..";
-const schnorrkel = new Schnorrkel()
-
-const { ethers } = require("hardhat");
-const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
-const DefaultSigner = require('../signers/DefaultSigner')
-import chai from 'chai';
+import { Schnorrkel } from '..';
+import chai, { expect } from 'chai';
 import chaiAssertionsCount from 'chai-assertions-count';
+import { DefaultSigner } from '../signers/DefaultSigner';
+import { ethers } from 'hardhat';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 chai.use(chaiAssertionsCount);
+const schnorrkel = new Schnorrkel()
+const ERC1271_MAGICVALUE_BYTES32 = '0x1626ba7e';
 
-const {
-  loadFixture,
-} = require("@nomicfoundation/hardhat-network-helpers");
-const { expect } = require("chai");
-
-describe("Multi Sign Tests", function () {
-  const entryPoint = "0x0000000000000000000000000000000000000000";
+describe('Multi Sign Tests', function () {
+  const entryPoint = '0x0000000000000000000000000000000000000000';
   async function deployContract() {
 
     // Contracts are deployed using the first signer/account by default
-    const SchnorrAccountAbstraction = await ethers.getContractFactory("SchnorrAccountAbstraction");
+    const SchnorrAccountAbstraction = await ethers.getContractFactory('SchnorrAccountAbstraction');
 
     // get the public key
     const signerOne = new DefaultSigner(0);
@@ -34,7 +29,7 @@ describe("Multi Sign Tests", function () {
     return { contract };
   }
 
-  it("should generate a schnorr musig2 and validate it on the blockchain", async function () {
+  it('should generate a schnorr musig2 and validate it on the blockchain', async function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);
@@ -54,7 +49,7 @@ describe("Multi Sign Tests", function () {
 
     // wrap the result
     const abiCoder = new ethers.utils.AbiCoder();
-    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    const sigData = abiCoder.encode([ 'bytes32', 'bytes32', 'bytes32', 'uint8' ], [
       px,
       e,
       sSummed,
@@ -65,7 +60,7 @@ describe("Multi Sign Tests", function () {
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32);
   })
 
-  it("should fail if the signer is totally different", async function () {
+  it('should fail if the signer is totally different', async function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);
@@ -86,7 +81,7 @@ describe("Multi Sign Tests", function () {
 
     // wrap the result
     const abiCoder = new ethers.utils.AbiCoder();
-    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    const sigData = abiCoder.encode([ 'bytes32', 'bytes32', 'bytes32', 'uint8' ], [
       px,
       e,
       sSummed,
@@ -97,7 +92,7 @@ describe("Multi Sign Tests", function () {
     expect(result).to.equal('0xffffffff');
   })
 
-  it("should fail if only one signature is provided", async function () {
+  it('should fail if only one signature is provided', async function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);
@@ -115,7 +110,7 @@ describe("Multi Sign Tests", function () {
 
     // wrap the result
     const abiCoder = new ethers.utils.AbiCoder();
-    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    const sigData = abiCoder.encode([ 'bytes32', 'bytes32', 'bytes32', 'uint8' ], [
       px,
       e,
       sigOne,
@@ -126,7 +121,7 @@ describe("Multi Sign Tests", function () {
     expect(result).to.equal('0xffffffff');
   })  
 
-  it("should fail if a signer tries to sign twice with the same nonce", async function () {
+  it('should fail if a signer tries to sign twice with the same nonce', async function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);
@@ -139,7 +134,7 @@ describe("Multi Sign Tests", function () {
     expect(signerOne.multiSignMessage.bind(signerOne, msg, publicKeys, publicNonces)).to.throw('Nonces should be exchanged before signing');
   })
 
-  it("should fail if only one signer tries to sign the transaction providing 2 messages", async function () {
+  it('should fail if only one signer tries to sign the transaction providing 2 messages', async function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);
@@ -161,7 +156,7 @@ describe("Multi Sign Tests", function () {
 
     // wrap the result
     const abiCoder = new ethers.utils.AbiCoder();
-    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    const sigData = abiCoder.encode([ 'bytes32', 'bytes32', 'bytes32', 'uint8' ], [
       px,
       e,
       sSummed,
@@ -172,7 +167,7 @@ describe("Multi Sign Tests", function () {
     expect(result).to.equal('0xffffffff');
   })
 
-  it("should generate a schnorr musig2 and validate it offchain", async function () {
+  it('should generate a schnorr musig2 and validate it offchain', async function () {
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);
     const msg = 'just a test message';
@@ -186,7 +181,7 @@ describe("Multi Sign Tests", function () {
     expect(result).to.equal(true);
   })
 
-  it("should successfully pass even if the order of the public keys is different", async function () {
+  it('should successfully pass even if the order of the public keys is different', async function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);
@@ -206,7 +201,7 @@ describe("Multi Sign Tests", function () {
 
     // wrap the result
     const abiCoder = new ethers.utils.AbiCoder();
-    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    const sigData = abiCoder.encode([ 'bytes32', 'bytes32', 'bytes32', 'uint8' ], [
       px,
       e,
       sSummed,
@@ -217,7 +212,7 @@ describe("Multi Sign Tests", function () {
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32);
   })
 
-  it("should throw error requirements for public keys when generating nonces and multi singatures", async function () {
+  it('should throw error requirements for public keys when generating nonces and multi singatures', async function () {
     chai.Assertion.expectExpects(3);
     const signerOne = new DefaultSigner(0);
     const signerTwo = new DefaultSigner(1);

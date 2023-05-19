@@ -1,21 +1,18 @@
-const { ethers, config } = require("hardhat");
-const secp256k1 = require('secp256k1')
-const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
-const { Schnorrkel } = require("..");
+import { config, ethers } from 'hardhat';
+import secp256k1 from 'secp256k1'
+import { Schnorrkel } from '..'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { expect } from 'chai';
+const ERC1271_MAGICVALUE_BYTES32 = '0x1626ba7e';
 const schnorrkel = new Schnorrkel();
 
-const {
-  loadFixture,
-} = require("@nomicfoundation/hardhat-network-helpers");
-const { expect } = require("chai");
-
-describe("Single Sign Tests", function () {
-  const entryPoint = "0x0000000000000000000000000000000000000000";
+describe('Single Sign Tests', function () {
+  const entryPoint = '0x0000000000000000000000000000000000000000';
   async function deployContract() {
-    const SchnorrAccountAbstraction = await ethers.getContractFactory("SchnorrAccountAbstraction");
+    const SchnorrAccountAbstraction = await ethers.getContractFactory('SchnorrAccountAbstraction');
 
     // the private key
-    const accounts = config.networks.hardhat.accounts
+    const accounts: any = config.networks.hardhat.accounts
     const accountIndex = 0
     const wallet = ethers.Wallet.fromMnemonic(accounts.mnemonic, accounts.path + `/${accountIndex}`)
     const privateKey = ethers.utils.arrayify(wallet.privateKey);
@@ -24,7 +21,7 @@ describe("Single Sign Tests", function () {
     const publicKey = secp256k1.publicKeyCreate(privateKey);
     const px = publicKey.slice(1, 33);
     const pxGeneratedAddress = ethers.utils.hexlify(px);
-    const address = "0x" + pxGeneratedAddress.slice(pxGeneratedAddress.length - 40, pxGeneratedAddress.length);
+    const address = '0x' + pxGeneratedAddress.slice(pxGeneratedAddress.length - 40, pxGeneratedAddress.length);
 
     // deploying the contract
     const contract = await SchnorrAccountAbstraction.deploy(entryPoint, [address]);
@@ -34,11 +31,11 @@ describe("Single Sign Tests", function () {
     return { contract };
   }
 
-  it("should generate a schnorr signature and verify onchain", async function () {
+  it('should generate a schnorr signature and verify onchain', async function () {
     const { contract } = await loadFixture(deployContract);
 
     // get the public key
-    const accounts = config.networks.hardhat.accounts
+    const accounts: any = config.networks.hardhat.accounts
     const accountIndex = 0
     const wallet = ethers.Wallet.fromMnemonic(accounts.mnemonic, accounts.path + `/${accountIndex}`)
     const privateKey = ethers.utils.arrayify(wallet.privateKey);
@@ -52,7 +49,7 @@ describe("Single Sign Tests", function () {
     const px = publicKey.slice(1, 33);
     const parity = publicKey[0] - 2 + 27;
     const abiCoder = new ethers.utils.AbiCoder();
-    const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
+    const sigData = abiCoder.encode([ 'bytes32', 'bytes32', 'bytes32', 'uint8' ], [
       px,
       sig.e,
       sig.s,
@@ -63,9 +60,9 @@ describe("Single Sign Tests", function () {
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32);
   })
 
-  it("should generate a schnorr signature and verify offchain", async function () {
+  it('should generate a schnorr signature and verify offchain', async function () {
     // get the Private key
-    const accounts = config.networks.hardhat.accounts
+    const accounts: any = config.networks.hardhat.accounts
     const accountIndex = 0
     const wallet = ethers.Wallet.fromMnemonic(accounts.mnemonic, accounts.path + `/${accountIndex}`)
     const privateKey = ethers.utils.arrayify(wallet.privateKey);

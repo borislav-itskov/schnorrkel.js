@@ -1,34 +1,33 @@
 import { config, ethers } from "hardhat";
-import { Schnorrkel } from "..";
-
+import secp256k1 from 'secp256k1'
+import { PublicNonces, Schnorrkel } from "..";
 const schnorrkel = new Schnorrkel();
-const secp256k1 = require('secp256k1')
 
-module.exports = class DefaultSigner {
+export class DefaultSigner {
 
-  #privateKey;
-  #publicKey;
+  #privateKey: Uint8Array;
+  #publicKey: Uint8Array;
 
-  constructor(index) {
+  constructor(index: number) {
     this.#privateKey = this.#generatePrivateKey(index)
     this.#publicKey = secp256k1.publicKeyCreate(this.#privateKey);
   }
 
-  #generatePrivateKey(index) {
+  #generatePrivateKey(index: number): Uint8Array {
     const accounts: any = config.networks.hardhat.accounts
     const wallet = ethers.Wallet.fromMnemonic(accounts.mnemonic, accounts.path + `/${index}`)
     return ethers.utils.arrayify(wallet.privateKey);
   }
 
-  getPublicKey() {
+  getPublicKey(): Uint8Array {
     return this.#publicKey;
   }
 
-  getPublicNonces() {
+  getPublicNonces(): PublicNonces {
     return schnorrkel.generatePublicNonces(this.#privateKey);
   }
 
-  multiSignMessage(msg, publicKeys, publicNonces) {
+  multiSignMessage(msg: string, publicKeys: Uint8Array[], publicNonces: PublicNonces[]) {
     return schnorrkel.multiSigSign(this.#privateKey, msg, publicKeys, publicNonces);
   }
 }

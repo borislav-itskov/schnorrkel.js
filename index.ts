@@ -25,7 +25,7 @@ interface NoncePairs {
   readonly kTwoPublic: Uint8Array,
 }
 
-interface PublicNonces {
+export interface PublicNonces {
   readonly kPublic: Uint8Array,
   readonly kTwoPublic: Uint8Array,
 }
@@ -230,7 +230,7 @@ export class Schnorrkel {
     }
   }
 
-  sumSigs(sigs: string[]): string {
+  sumSigs(sigs: Uint8Array[]): Uint8Array {
     var combined = getBigi().fromBuffer(sigs[0]);
     sigs.shift();
     sigs.map(sig => {
@@ -239,7 +239,7 @@ export class Schnorrkel {
     return combined.mod(n).toBuffer(32);
   }
 
-  verify(s: string, msg: string, R: Uint8Array, publicKey: Uint8Array): boolean {
+  verify(s: Uint8Array, msg: string, R: Uint8Array, publicKey: Uint8Array): boolean {
     const hash = this.#hashMessage(msg)
     const eC = this.#challenge(R, hash, publicKey)
     const sG = generatorPoint.mul(ethers.utils.arrayify(s))
