@@ -2,7 +2,8 @@ import { randomBytes } from 'crypto'
 import { ethers } from 'ethers'
 import secp256k1 from 'secp256k1'
 
-import { KeyPair } from './keys'
+import { Key, KeyPair } from './keys'
+import { NoncePairs, PublicNonces } from './nonce'
 
 export const _generateL = (publicKeys: Array<Buffer>) => {
   return ethers.utils.keccak256(_concatTypedArrays(publicKeys.sort()))
@@ -35,4 +36,43 @@ export const _generateRandomKeys = (): KeyPair => {
     publicKey: pubKey,
     privateKey: privKeyBytes,
   })
+}
+
+export const _hashPrivateKey = (privateKey: Buffer): string => {
+  return ethers.utils.keccak256(privateKey)
+}
+
+export const _generatePublicNonces = (privateKey: Buffer): {
+  privateNonceData: Pick<NoncePairs, 'k' | 'kTwo'>,
+  publicNonceData: PublicNonces,
+  hash: string,
+} => {
+  const hash = _hashPrivateKey(privateKey)
+  const nonce = _generateNonce()
+
+  return {
+    hash,
+    privateNonceData: {
+      k: nonce.k,
+      kTwo: nonce.kTwo,
+    },
+    publicNonceData: {
+      kPublic: nonce.kPublic,
+      kTwoPublic: nonce.kTwoPublic,
+    }
+  }
+}
+
+const _generateNonce = (): NoncePairs => {
+  const k = ethers.utils.randomBytes(32)
+  const kTwo = ethers.utils.randomBytes(32)
+  const kPublic = secp256k1.publicKeyCreate(k)
+  const kTwoPublic = secp256k1.publicKeyCreate(kTwo)
+
+  return {
+    k: new Key(Buffer.from(k)),
+    kTwo: new Key(Buffer.from(kTwo)),
+    kPublic: new Key(Buffer.from(kPublic)),
+    kTwoPublic: new Key(Buffer.from(kTwoPublic)),
+  }
 }
