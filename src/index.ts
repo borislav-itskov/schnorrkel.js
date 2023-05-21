@@ -1,1 +1,3 @@
-export { default as Schnorrkel } from './core'
+import Schnorrkel from './schnorrkel'
+
+export default Schnorrkel

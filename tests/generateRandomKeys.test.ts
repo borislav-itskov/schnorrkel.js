@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import Schnorrkel from '../src/core'
+import Schnorrkel from '../src/index'
 
-describe('testing gererateRandomKeys', () => {
+describe('testing generateRandomKeys', () => {
   it('should generate key pair', () => {
-    const keyPair = Schnorrkel.gererateRandomKeys()
+    const keyPair = Schnorrkel.generateRandomKeys()
 
     expect(keyPair).toBeDefined()
     expect(keyPair.privateKey).toBeDefined()
@@ -15,8 +15,8 @@ describe('testing gererateRandomKeys', () => {
   })
 
   it('should generate different key pairs', () => {
-    const keyPairOne = Schnorrkel.gererateRandomKeys()
-    const keyPairTwo = Schnorrkel.gererateRandomKeys()
+    const keyPairOne = Schnorrkel.generateRandomKeys()
+    const keyPairTwo = Schnorrkel.generateRandomKeys()
 
     expect(keyPairOne.publicKey.toHex()).not.toEqual(keyPairTwo.publicKey.toHex())
     expect(keyPairOne.privateKey.toHex()).not.toEqual(keyPairTwo.privateKey.toHex())
