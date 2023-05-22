@@ -178,3 +178,12 @@ const challenge = (R: Uint8Array, msgHash: string, publicKey: Uint8Array): Uint8
     )
   )
 }
+
+export const _sumSigs = (signatures: Uint8Array[]): Buffer => {
+  let combined = bigi.fromBuffer(signatures[0])
+  signatures.shift();
+  signatures.forEach(sig => {
+    combined = combined.add(bigi.fromBuffer(sig))
+  })
+  return combined.mod(n).toBuffer(32)
+}
