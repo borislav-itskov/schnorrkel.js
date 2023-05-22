@@ -1,4 +1,4 @@
-class Key {
+export class Key {
   readonly buffer: Buffer
 
   constructor(buffer: Buffer) {
@@ -13,5 +13,3 @@ class Key {
     return new Key(Buffer.from(hex, 'hex'))
   }
 }
-
-export default Key

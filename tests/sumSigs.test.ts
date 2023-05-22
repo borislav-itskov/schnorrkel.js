@@ -25,6 +25,6 @@ describe('testing sumSigs', () => {
     const signature = Schnorrkel.sumSigs(signatures)
 
     expect(signature).toBeDefined()
-    expect(signature).toHaveLength(32)
+    expect(signature.buffer).toHaveLength(32)
   })
 })

@@ -1,17 +1,28 @@
 import secp256k1 from 'secp256k1'
 
-import { KeyPair, Key } from './keys'
-import type { Nonces, PublicNonces } from './nonce'
-import type { Signature } from './signature'
+import { KeyPair, Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
 import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify } from './core'
+import { InternalNonces, InternalPublicNonces } from './core/types'
+import { Challenge, FinalPublicNonce, MusigSignature } from './types/signature'
 
 class Schnorrkel {
   private nonces: Nonces = {}
 
   private _setNonce(privateKey: Buffer): string {
     const { publicNonceData, privateNonceData, hash } = _generatePublicNonces(privateKey)
-    this.nonces[hash] = { ...privateNonceData, ...publicNonceData }
+
+    const mappedPublicNonce: PublicNonces = {
+      kPublic: new Key(Buffer.from(publicNonceData.kPublic)),
+      kTwoPublic: new Key(Buffer.from(publicNonceData.kTwoPublic)),
+    }
+
+    const mappedPrivateNonce: Pick<NoncePairs, 'k' | 'kTwo'> = {
+      k: new Key(Buffer.from(privateNonceData.k)),
+      kTwo: new Key(Buffer.from(privateNonceData.kTwo))
+    }
+
+    this.nonces[hash] = { ...mappedPrivateNonce, ...mappedPublicNonce }
     return hash
   }
 
@@ -31,7 +42,8 @@ class Schnorrkel {
   }
 
   static generateRandomKeys(): KeyPair {
-    return _generateRandomKeys()
+    const data = _generateRandomKeys()
+    return new KeyPair(data)
   }
 
   static fromJson(json: string): Schnorrkel {
@@ -102,23 +114,48 @@ class Schnorrkel {
     delete this.nonces[hash]
   }
 
-  multiSigSign(privateKey: Key, msg: string, publicKeys: Key[], publicNonces: PublicNonces[]): Signature {
+  multiSigSign(privateKey: Key, msg: string, publicKeys: Key[], publicNonces: PublicNonces[]): MusigSignature {
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const signature = _multiSigSign(this.nonces, combinedPublicKey, privateKey.buffer, msg, publicKeys.map(key => key.buffer), publicNonces)
+    const mappedPublicNonce: InternalPublicNonces[] = publicNonces.map(publicNonce => {
+      return {
+        kPublic: publicNonce.kPublic.buffer,
+        kTwoPublic: publicNonce.kTwoPublic.buffer,
+      }
+    })
+
+    const mappedNonces: InternalNonces = Object.fromEntries(Object.entries(this.nonces).map(([hash, nonce]) => {
+      return [
+        hash,
+        {
+          k: nonce.k.buffer,
+          kTwo: nonce.kTwo.buffer,
+          kPublic: nonce.kPublic.buffer,
+          kTwoPublic: nonce.kTwoPublic.buffer,
+        }
+      ]
+    }))
+
+    const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, msg, publicKeys.map(key => key.buffer), mappedPublicNonce)
 
     // absolutely crucial to delete the nonces once a signature has been crafted with them.
     // nonce reusae will lead to private key leakage!
     this.clearNonces(privateKey)
 
-    return signature
+    return {
+      signature: new Signature(Buffer.from(musigData.signature)),
+      finalPublicNonce: new FinalPublicNonce(Buffer.from(musigData.finalPublicNonce)),
+      challenge: new Challenge(Buffer.from(musigData.challenge)),
+    }
   }
 
-  static sumSigs(signatures: Uint8Array[]): Buffer {
-    return _sumSigs(signatures)
+  static sumSigs(signatures: Signature[]): Signature {
+    const mappedSignatures = signatures.map(signature => signature.buffer)
+    const sum = _sumSigs(mappedSignatures)
+    return new Signature(Buffer.from(sum))
   }
 
-  static verify(signaturesSummed: Buffer, msg: string, finalPublicNonce: Uint8Array, publicKey: Key): boolean {
-    return _verify(signaturesSummed, msg, finalPublicNonce, publicKey.buffer)
+  static verify(signaturesSummed: Signature, msg: string, finalPublicNonce: FinalPublicNonce, publicKey: Key): boolean {
+    return _verify(signaturesSummed.buffer, msg, finalPublicNonce.buffer, publicKey.buffer)
   }
 }
 

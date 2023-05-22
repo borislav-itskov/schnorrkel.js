@@ -1,6 +1,6 @@
-import Key from './key'
+import { Key } from './key'
 
-class KeyPair {
+export class KeyPair {
     privateKey: Key
     publicKey: Key
 
@@ -13,5 +13,3 @@ class KeyPair {
         return new KeyPair(params)
     }
 }
-
-export default KeyPair

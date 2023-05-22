@@ -1,4 +1,4 @@
-import { Key } from './keys'
+import { Key } from './key'
 
 export interface NoncePairs {
   readonly k: Key,

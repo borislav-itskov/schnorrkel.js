@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import Schnorrkel from '../src/index'
-import { Key } from '../src/keys'
+import { Key } from '../src/types'
 
 describe('testing getCombinedPublicKey', () => {
   it('should get combined public key', () => {
