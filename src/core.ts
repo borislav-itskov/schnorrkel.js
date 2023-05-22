@@ -2,7 +2,9 @@ import { randomBytes } from 'crypto'
 import { ethers } from 'ethers'
 import secp256k1 from 'secp256k1'
 import ecurve from 'ecurve'
+import elliptic from 'elliptic'
 import bigi from 'bigi'
+import { BN } from 'bn.js'
 
 import { Key, KeyPair } from './keys'
 import type { NoncePairs, PublicNonces, Nonces } from './nonce'
@@ -10,6 +12,9 @@ import type { Signature } from './signature'
 
 const curve = ecurve.getCurveByName('secp256k1')
 const n = curve?.n
+const EC = elliptic.ec
+const ec = new EC('secp256k1')
+const generatorPoint = ec.g
 
 
 export const _generateL = (publicKeys: Array<Buffer>) => {
@@ -108,7 +113,7 @@ export const _multiSigSign = (nonces: Nonces, combinedPublicKey: Key, privateKey
 
   const publicKey = secp256k1.publicKeyCreate(privateKey)
   const L = _generateL(publicKeys)
-  const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
+  const msgHash = _hashMessage(msg)
   const a = _aCoefficient(publicKey, L)
   const b = _bCoefficient(combinedPublicKey.buffer, msgHash, publicNonces)
 
@@ -186,4 +191,20 @@ export const _sumSigs = (signatures: Uint8Array[]): Buffer => {
     combined = combined.add(bigi.fromBuffer(sig))
   })
   return combined.mod(n).toBuffer(32)
+}
+
+export const _hashMessage = (message: string): string => {
+  return ethers.utils.solidityKeccak256(['string'], [message])
+}
+
+export const _verify = (s: Uint8Array, msg: string, R: Uint8Array, publicKey: Uint8Array): boolean => {
+  const hash = _hashMessage(msg)
+  const eC = challenge(R, hash, publicKey)
+  const sG = generatorPoint.mul(ethers.utils.arrayify(s))
+  const P = ec.keyFromPublic(publicKey).getPublic()
+  const bnEC = new BN(Buffer.from(eC).toString('hex'),'hex')
+  const Pe = P.mul(bnEC)
+  const toPublicR = ec.keyFromPublic(R).getPublic()
+  const RplusPe = toPublicR.add(Pe)
+  return sG.eq(RplusPe)
 }

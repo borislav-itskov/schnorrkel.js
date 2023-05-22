@@ -4,7 +4,7 @@ import { KeyPair, Key } from './keys'
 import type { Nonces, PublicNonces } from './nonce'
 import type { Signature } from './signature'
 
-import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs } from './core'
+import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify } from './core'
 
 class Schnorrkel {
   private nonces: Nonces = {}
@@ -115,6 +115,10 @@ class Schnorrkel {
 
   static sumSigs(signatures: Uint8Array[]): Buffer {
     return _sumSigs(signatures)
+  }
+
+  static verify(signaturesSummed: Buffer, msg: string, finalPublicNonce: Uint8Array, publicKey: Key): boolean {
+    return _verify(signaturesSummed, msg, finalPublicNonce, publicKey.buffer)
   }
 }
 
