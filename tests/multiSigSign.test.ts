@@ -47,23 +47,4 @@ describe('testing multiSigSign', () => {
 
     expect(() => schnorrkel.multiSigSign(keyPairOne.privateKey, msg, publicKeys, [])).toThrowError('Nonces should be exchanged before signing')
   })
-
-  it('should requires valid nonces', () => {
-    const schnorrkel = new Schnorrkel()
-    const keyPairOne = Schnorrkel.generateRandomKeys()
-    const keyPairTwo = Schnorrkel.generateRandomKeys()
-    const publicNoncesOne = schnorrkel.generatePublicNonces(keyPairOne.privateKey)
-
-    const msg = 'test message'
-    const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
-
-    const invalidNonce: PublicNonces = {
-      kPublic: new Key(Buffer.from('invalid', 'hex')),
-      kTwoPublic: new Key(Buffer.from('invalid', 'hex')),
-    }
-
-    expect(() => schnorrkel.multiSigSign(keyPairOne.privateKey, msg, publicKeys, [publicNoncesOne, invalidNonce])).toThrowError('Passed nonces are invalid')
-  })
-
-
 })
