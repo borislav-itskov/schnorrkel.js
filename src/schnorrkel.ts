@@ -2,7 +2,7 @@ import secp256k1 from 'secp256k1'
 
 import { KeyPair, Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify } from './core'
+import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk } from './core'
 import { InternalNonces, InternalPublicNonces } from './core/types'
 import { Challenge, FinalPublicNonce, MusigSignature } from './types/signature'
 
@@ -39,6 +39,14 @@ class Schnorrkel {
     })
 
     return new Key(Buffer.from(secp256k1.publicKeyCombine(modifiedKeys)))
+  }
+
+  static getCombinedAddress(publicKeys: Array<Key>): string {
+    if (publicKeys.length < 2) throw Error('At least 2 public keys should be provided')
+
+    const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
+    const px = _generatePk(combinedPublicKey.buffer)
+    return px
   }
 
   static generateRandomKeys(): KeyPair {

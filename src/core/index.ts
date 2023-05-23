@@ -207,3 +207,8 @@ export const _verify = (s: Uint8Array, msg: string, R: Uint8Array, publicKey: Ui
   const RplusPe = toPublicR.add(Pe)
   return sG.eq(RplusPe)
 }
+
+export const _generatePk = (combinedPublicKey: Uint8Array): string => {
+  const px = ethers.utils.hexlify(combinedPublicKey.slice(1,33))
+  return '0x' + px.slice(px.length - 40, px.length)
+}
