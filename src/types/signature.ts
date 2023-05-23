@@ -1,5 +1,5 @@
 
-export interface MusigSignature {
+export interface SignatureOutput {
   finalPublicNonce: FinalPublicNonce, // the final public nonce
   challenge: Challenge, // the schnorr challenge
   signature: Signature, // the signature

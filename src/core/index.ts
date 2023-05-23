@@ -6,7 +6,6 @@ import elliptic from 'elliptic'
 import bigi from 'bigi'
 import { BN } from 'bn.js'
 
-import { Key, KeyPair, NoncePairs, PublicNonces, Nonces, Signature } from '../types'
 import { InternalNoncePairs, InternalNonces, InternalPublicNonces, InternalSignature } from './types'
 
 const curve = ecurve.getCurveByName('secp256k1')
@@ -211,4 +210,28 @@ export const _verify = (s: Uint8Array, msg: string, R: Uint8Array, publicKey: Ui
 export const _generatePk = (combinedPublicKey: Uint8Array): string => {
   const px = ethers.utils.hexlify(combinedPublicKey.slice(1,33))
   return '0x' + px.slice(px.length - 40, px.length)
+}
+
+export const _sign = (privateKey: Uint8Array, msg: string): InternalSignature  => {
+  const hash = _hashMessage(msg)
+  const publicKey = secp256k1.publicKeyCreate((privateKey as any))
+
+  // R = G * k
+  var k = ethers.utils.randomBytes(32)
+  var R = secp256k1.publicKeyCreate(k)
+
+  // e = h(address(R) || compressed pubkey || m)
+  var e = challenge(R, hash, publicKey)
+
+  // xe = x * e
+  var xe = secp256k1.privateKeyTweakMul((privateKey as any), e)
+
+  // s = k + xe
+  var s = secp256k1.privateKeyTweakAdd(k, xe)
+
+  return {
+    finalPublicNonce: R,
+    challenge: e,
+    signature: s
+  }
 }

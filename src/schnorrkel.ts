@@ -2,9 +2,9 @@ import secp256k1 from 'secp256k1'
 
 import { KeyPair, Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk } from './core'
+import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign } from './core'
 import { InternalNonces, InternalPublicNonces } from './core/types'
-import { Challenge, FinalPublicNonce, MusigSignature } from './types/signature'
+import { Challenge, FinalPublicNonce, SignatureOutput } from './types/signature'
 
 class Schnorrkel {
   private nonces: Nonces = {}
@@ -122,7 +122,7 @@ class Schnorrkel {
     delete this.nonces[hash]
   }
 
-  multiSigSign(privateKey: Key, msg: string, publicKeys: Key[], publicNonces: PublicNonces[]): MusigSignature {
+  multiSigSign(privateKey: Key, msg: string, publicKeys: Key[], publicNonces: PublicNonces[]): SignatureOutput {
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
     const mappedPublicNonce: InternalPublicNonces[] = publicNonces.map(publicNonce => {
       return {
@@ -153,6 +153,16 @@ class Schnorrkel {
       signature: new Signature(Buffer.from(musigData.signature)),
       finalPublicNonce: new FinalPublicNonce(Buffer.from(musigData.finalPublicNonce)),
       challenge: new Challenge(Buffer.from(musigData.challenge)),
+    }
+  }
+
+  static sign(privateKey: Key, msg: string): SignatureOutput {
+    const output = _sign(privateKey.buffer, msg)
+
+    return {
+      signature: new Signature(Buffer.from(output.signature)),
+      finalPublicNonce: new FinalPublicNonce(Buffer.from(output.finalPublicNonce)),
+      challenge: new Challenge(Buffer.from(output.challenge)),
     }
   }
 
