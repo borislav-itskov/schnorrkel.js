@@ -35,12 +35,18 @@ describe('testing getCombinedPublicKey', () => {
 
   })
 
-  it('shoud get combined public key that is different from the original public keys', () => {
+  it('should get combined public key that is different from the original public keys', () => {
     const keyPairOne = Schnorrkel.generateRandomKeys()
     const keyPairTwo = Schnorrkel.generateRandomKeys()
 
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey([keyPairOne.publicKey, keyPairTwo.publicKey])
     expect(combinedPublicKey.toHex()).not.toEqual(keyPairOne.publicKey.toHex())
     expect(combinedPublicKey.toHex()).not.toEqual(keyPairTwo.publicKey.toHex())
+  })
+
+  it('should requires two public keys or more', () => {
+    const keyPair = Schnorrkel.generateRandomKeys()
+
+    expect(() => Schnorrkel.getCombinedPublicKey([keyPair.publicKey])).toThrowError('At least 2 public keys should be provided')
   })
 })
