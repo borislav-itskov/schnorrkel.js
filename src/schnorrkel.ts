@@ -2,7 +2,7 @@ import secp256k1 from 'secp256k1'
 
 import { KeyPair, Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign } from './core'
+import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign, _generateHashWithSalt, _multiSigSignWithHash } from './core'
 import { InternalNonces, InternalPublicNonces } from './core/types'
 import { Challenge, FinalPublicNonce, SignatureOutput } from './types/signature'
 
@@ -24,6 +24,27 @@ class Schnorrkel {
 
     this.nonces[hash] = { ...mappedPrivateNonce, ...mappedPublicNonce }
     return hash
+  }
+
+  static generateCombinedPublicKeyWithSalt(publicKeys: Array<Key>): {
+    combinedKey: Key,
+    hashedKey: string,
+  } {
+    if (publicKeys.length < 2) {
+      throw Error('At least 2 public keys should be provided')
+    }
+
+    const bufferPublicKeys = publicKeys.map(publicKey => publicKey.buffer)
+    const hashedKey = _generateHashWithSalt(bufferPublicKeys)
+
+    const modifiedKeys = bufferPublicKeys.map(publicKey => {
+      return secp256k1.publicKeyTweakMul(publicKey, _aCoefficient(publicKey, hashedKey))
+    })
+
+    return {
+      combinedKey: new Key(Buffer.from(secp256k1.publicKeyCombine(modifiedKeys))),
+      hashedKey
+    }
   }
 
   static getCombinedPublicKey(publicKeys: Array<Key>): Key {
@@ -144,6 +165,42 @@ class Schnorrkel {
     }))
 
     const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, msg, publicKeys.map(key => key.buffer), mappedPublicNonce)
+
+    // absolutely crucial to delete the nonces once a signature has been crafted with them.
+    // nonce reusae will lead to private key leakage!
+    this.clearNonces(privateKey)
+
+    return {
+      signature: new Signature(Buffer.from(musigData.signature)),
+      finalPublicNonce: new FinalPublicNonce(Buffer.from(musigData.finalPublicNonce)),
+      challenge: new Challenge(Buffer.from(musigData.challenge)),
+    }
+  }
+
+  multiSigSignWithHash(privateKey: Key, msg: string, combinedPublicKey: {
+    combinedKey: Key,
+    hashedKey: string
+  }, publicNonces: PublicNonces[]): SignatureOutput {
+    const mappedPublicNonce: InternalPublicNonces[] = publicNonces.map(publicNonce => {
+      return {
+        kPublic: publicNonce.kPublic.buffer,
+        kTwoPublic: publicNonce.kTwoPublic.buffer,
+      }
+    })
+
+    const mappedNonces: InternalNonces = Object.fromEntries(Object.entries(this.nonces).map(([hash, nonce]) => {
+      return [
+        hash,
+        {
+          k: nonce.k.buffer,
+          kTwo: nonce.kTwo.buffer,
+          kPublic: nonce.kPublic.buffer,
+          kTwoPublic: nonce.kTwoPublic.buffer,
+        }
+      ]
+    }))
+
+    const musigData = _multiSigSignWithHash(mappedNonces, combinedPublicKey.combinedKey.buffer, combinedPublicKey.hashedKey, privateKey.buffer, msg, mappedPublicNonce)
 
     // absolutely crucial to delete the nonces once a signature has been crafted with them.
     // nonce reusae will lead to private key leakage!
