@@ -2,7 +2,7 @@ import secp256k1 from 'secp256k1'
 
 import { KeyPair, Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _generateRandomKeys, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign } from './core'
+import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign } from './core'
 import { InternalNonces, InternalPublicNonces } from './core/types'
 import { Challenge, FinalPublicNonce, SignatureOutput } from './types/signature'
 
@@ -47,11 +47,6 @@ class Schnorrkel {
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
     const px = _generatePk(combinedPublicKey.buffer)
     return px
-  }
-
-  static generateRandomKeys(): KeyPair {
-    const data = _generateRandomKeys()
-    return new KeyPair(data)
   }
 
   static fromJson(json: string): Schnorrkel {

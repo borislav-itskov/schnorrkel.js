@@ -7,6 +7,7 @@ import bigi from 'bigi'
 import { BN } from 'bn.js'
 
 import { InternalNoncePairs, InternalNonces, InternalPublicNonces, InternalSignature } from './types'
+import { KeyPair } from '../types'
 
 const curve = ecurve.getCurveByName('secp256k1')
 const n = curve?.n
@@ -46,7 +47,7 @@ const _bCoefficient = (combinedPublicKey: Uint8Array, msgHash: string, publicNon
 }
 
 
-export const _generateRandomKeys = () => {
+export const generateRandomKeys = () => {
   let privKeyBytes: Buffer | undefined
   do {
     privKeyBytes = randomBytes(32)
@@ -54,10 +55,12 @@ export const _generateRandomKeys = () => {
 
   const pubKey = Buffer.from(secp256k1.publicKeyCreate(privKeyBytes))
 
-  return {
+  const data = {
     publicKey: pubKey,
     privateKey: privKeyBytes,
   }
+
+  return new KeyPair(data)
 }
 
 export const _hashPrivateKey = (privateKey: Uint8Array): string => {

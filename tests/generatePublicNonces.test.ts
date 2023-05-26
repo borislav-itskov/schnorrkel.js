@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import Schnorrkel from '../src/index'
-import { _hashPrivateKey } from '../src/core'
+import { _hashPrivateKey, generateRandomKeys } from '../src/core'
 
 
 describe('testing generatePublicNonces', () => {
   it('should generate public nonces', () => {
     const schnorrkel = new Schnorrkel()
 
-    const keyPair = Schnorrkel.generateRandomKeys()
+    const keyPair = generateRandomKeys()
     const publicNonces = schnorrkel.generatePublicNonces(keyPair.privateKey)
 
     expect(publicNonces).toBeDefined()
@@ -21,7 +21,7 @@ describe('testing generatePublicNonces', () => {
   it('should overwrite public nonces with same private key', () => {
     const schnorrkel = new Schnorrkel()
 
-    const keyPair = Schnorrkel.generateRandomKeys()
+    const keyPair = generateRandomKeys()
     const publicNoncesOne = schnorrkel.generatePublicNonces(keyPair.privateKey)
     const jsonDataOne = schnorrkel.toJson()
     const publicNoncesTwo = schnorrkel.generatePublicNonces(keyPair.privateKey)

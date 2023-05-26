@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import Schnorrkel from '../src/index'
-import { _hashPrivateKey } from '../src/core'
+import { _hashPrivateKey, generateRandomKeys } from '../src/core'
 
 
 describe('testing verify', () => {
@@ -9,8 +9,8 @@ describe('testing verify', () => {
     const schnorrkelOne = new Schnorrkel()
     const schnorrkelTwo = new Schnorrkel()
 
-    const keyPairOne = Schnorrkel.generateRandomKeys()
-    const keyPairTwo = Schnorrkel.generateRandomKeys()
+    const keyPairOne = generateRandomKeys()
+    const keyPairTwo = generateRandomKeys()
     const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
     const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
     

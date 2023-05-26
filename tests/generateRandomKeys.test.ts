@@ -4,7 +4,7 @@ import Schnorrkel from '../src/index'
 
 describe('testing generateRandomKeys', () => {
   it('should generate key pair', () => {
-    const keyPair = Schnorrkel.generateRandomKeys()
+    const keyPair = generateRandomKeys()
 
     expect(keyPair).toBeDefined()
     expect(keyPair.privateKey).toBeDefined()
@@ -15,8 +15,8 @@ describe('testing generateRandomKeys', () => {
   })
 
   it('should generate different key pairs', () => {
-    const keyPairOne = Schnorrkel.generateRandomKeys()
-    const keyPairTwo = Schnorrkel.generateRandomKeys()
+    const keyPairOne = generateRandomKeys()
+    const keyPairTwo = generateRandomKeys()
 
     expect(keyPairOne.publicKey.toHex()).not.toEqual(keyPairTwo.publicKey.toHex())
     expect(keyPairOne.privateKey.toHex()).not.toEqual(keyPairTwo.privateKey.toHex())

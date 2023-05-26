@@ -1,10 +1,11 @@
 import { describe, expect, it, expectTypeOf } from 'vitest'
 
 import Schnorrkel from '../src/index'
+import { generateRandomKeys } from '../src/core'
 
 describe('testing sign', () => {
   it('should generate signature', () => {
-    const keyPair = Schnorrkel.generateRandomKeys()
+    const keyPair = generateRandomKeys()
 
     const msg = 'test message'
     const signature = Schnorrkel.sign(keyPair.privateKey, msg)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import Schnorrkel, { Key, PublicNonces } from '../src/index'
-import { _hashPrivateKey } from '../src/core'
+import { _hashPrivateKey, generateRandomKeys } from '../src/core'
 
 
 describe('testing multiSigSign', () => {
@@ -9,8 +9,8 @@ describe('testing multiSigSign', () => {
     const schnorrkelOne = new Schnorrkel()
     const schnorrkelTwo = new Schnorrkel()
 
-    const keyPairOne = Schnorrkel.generateRandomKeys()
-    const keyPairTwo = Schnorrkel.generateRandomKeys()
+    const keyPairOne = generateRandomKeys()
+    const keyPairTwo = generateRandomKeys()
     const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
     const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
 
@@ -28,7 +28,7 @@ describe('testing multiSigSign', () => {
 
   it('should requires two public keys or more', () => {
     const schnorrkel = new Schnorrkel()
-    const keyPair = Schnorrkel.generateRandomKeys()
+    const keyPair = generateRandomKeys()
     const publicNonces = schnorrkel.generatePublicNonces(keyPair.privateKey)
 
     const msg = 'test message'
@@ -39,8 +39,8 @@ describe('testing multiSigSign', () => {
 
   it('should requires nonces', () => {
     const schnorrkel = new Schnorrkel()
-    const keyPairOne = Schnorrkel.generateRandomKeys()
-    const keyPairTwo = Schnorrkel.generateRandomKeys()
+    const keyPairOne = generateRandomKeys()
+    const keyPairTwo = generateRandomKeys()
 
     const msg = 'test message'
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]

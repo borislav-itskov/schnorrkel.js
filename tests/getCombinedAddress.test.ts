@@ -4,8 +4,8 @@ import Schnorrkel from '../src/index'
 
 describe('testing getCombinedAddress', () => {
   it('should get combined address', () => {
-    const keyPairOne = Schnorrkel.generateRandomKeys()
-    const keyPairTwo = Schnorrkel.generateRandomKeys()
+    const keyPairOne = generateRandomKeys()
+    const keyPairTwo = generateRandomKeys()
 
     const combinedAddress = Schnorrkel.getCombinedAddress([keyPairOne.publicKey, keyPairTwo.publicKey])
     expect(combinedAddress).toBeDefined()
@@ -13,7 +13,7 @@ describe('testing getCombinedAddress', () => {
   })
 
   it('should requires two public keys or more', () => {
-    const keyPair = Schnorrkel.generateRandomKeys()
+    const keyPair = generateRandomKeys()
 
     expect(() => Schnorrkel.getCombinedAddress([keyPair.publicKey])).toThrowError('At least 2 public keys should be provided')
   })
