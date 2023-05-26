@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import Schnorrkel from '../src/index'
+import { generateRandomKeys } from '../src/core'
 
 describe('testing generateRandomKeys', () => {
   it('should generate key pair', () => {

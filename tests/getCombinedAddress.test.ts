@@ -1,6 +1,7 @@
 import { describe, expect, it, expectTypeOf  } from 'vitest'
 
 import Schnorrkel from '../src/index'
+import { generateRandomKeys } from '../src/core'
 
 describe('testing getCombinedAddress', () => {
   it('should get combined address', () => {
