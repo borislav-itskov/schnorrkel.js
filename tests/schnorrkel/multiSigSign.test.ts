@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import Schnorrkel, { Key, PublicNonces } from '../src/index'
-import { _hashPrivateKey, generateRandomKeys } from '../src/core'
+import Schnorrkel from '../../src/index'
+import { _hashPrivateKey, generateRandomKeys } from '../../src/core'
 
 
 describe('testing multiSigSign', () => {

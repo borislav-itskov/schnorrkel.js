@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import Schnorrkel from '../src/index'
-import { Key } from '../src/types'
-import { generateRandomKeys } from '../src/core'
+import Schnorrkel from '../../src/index'
+import { Key } from '../../src/types'
+import { generateRandomKeys } from '../../src/core'
 
 describe('testing getCombinedPublicKey', () => {
   it('should get combined public key', () => {

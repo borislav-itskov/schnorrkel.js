@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import Schnorrkel, { KeyPair } from '../src/index'
+import { KeyPair } from '../src/index'
 import { _hashPrivateKey, generateRandomKeys } from '../src/core'
 
 

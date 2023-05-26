@@ -1,7 +1,7 @@
-import { describe, expect, it, expectTypeOf } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import Schnorrkel from '../src/index'
-import { generateRandomKeys } from '../src/core'
+import Schnorrkel from '../../src/index'
+import { generateRandomKeys } from '../../src/core'
 
 describe('testing sign', () => {
   it('should generate signature', () => {

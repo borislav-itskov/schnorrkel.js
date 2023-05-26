@@ -1,25 +1,25 @@
 import { describe, expect, it } from 'vitest'
 
-import Schnorrkel from '../src/index'
-import { _hashPrivateKey, generateRandomKeys } from '../src/core'
+import { UnsafeSchnorrkel } from '../../src/index'
+import { _hashPrivateKey, generateRandomKeys } from '../../src/core'
 
 
 describe('testing fromJson', () => {
   it('should create Schnorrkel instance from json', () => {
-    const schnorrkel = new Schnorrkel()
+    const schnorrkel = new UnsafeSchnorrkel()
 
     const keyPair = generateRandomKeys()
     schnorrkel.generatePublicNonces(keyPair.privateKey)
     const jsonData = schnorrkel.toJson()
 
-    const schnorrkelFromJson = Schnorrkel.fromJson(jsonData)
+    const schnorrkelFromJson = UnsafeSchnorrkel.fromJson(jsonData)
     const jsonDataFromJson = schnorrkelFromJson.toJson()
 
     expect(jsonData).toEqual(jsonDataFromJson)
   })
 
   it('should throw error if json is invalid', () => {
-    const schnorrkel = new Schnorrkel()
+    const schnorrkel = new UnsafeSchnorrkel()
 
     const keyPair = generateRandomKeys()
     schnorrkel.generatePublicNonces(keyPair.privateKey)
@@ -27,6 +27,6 @@ describe('testing fromJson', () => {
 
     const invalidJsonData = jsonData.slice(0, -1)
 
-    expect(() => Schnorrkel.fromJson(invalidJsonData)).toThrow('Invalid JSON')
+    expect(() => UnsafeSchnorrkel.fromJson(invalidJsonData)).toThrow('Invalid JSON')
   })
 })
