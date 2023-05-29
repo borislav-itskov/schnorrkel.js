@@ -1,15 +1,14 @@
 # Schnorr Signatures
-JavaScript library for signing and verifying Schnorr Signatures.  
+A javaScript library for signing and verifying Schnorr Signatures.  
 It can be used for single and multi signatures.  
 Blockchain validation via ecrecover is also supported.  
 
 # Typescript support
-Version 1.1.0 ports the javascript code to typescript. It also comes with some breaking changes in comparison with 1.0.2.  
-You could review these changes [here](https://github.com/borislav-itskov/schnorrkel.js/pull/1)
+Since version 2.0.0, we're moving entirely to Typescript.
 
 ## Requirements:
 
-* Node.js v16.x.x
+* Node: >=16.0.0, <20.0.0
 * npm (Node.js package manager) v9.x.x
 
 ## Installation
@@ -32,19 +31,18 @@ We refer to Single Signatures as ones that have a single signer.
 
 Sign:
 ```
-const Schnorrkel = require('schnorrkel')
-// import Schnorrkel from 'schnorrkel' for typescript
-const schnorrkel = new Schnorrkel()
-const privateKey: Uint8Array = '...'
-const msg = 'a message'
-const {R, s} = schnorrkel.sign(msg, privateKey)
+import Schnorrkel from 'schnorrkel'
+
+const privateKey = randomBytes(32) // Buffer
+const msg = 'test message'
+const {signature, finalPublicNonce} = Schnorrkel.sign(privateKey, msg)
 ```
 
 Offchain verification:
 ```
 const publicKey: Uint8Array = ... (derived from the privateKey)
-// s and R come from the signature
-const result = schnorrkel.verify(s, msg, R, publicKey)
+// signature and finalPublicNonce come from s
+const result = Schnorrkel.verify(signature, msg, finalPublicNonce, publicKey)
 ```
 
 Onchain verification:
@@ -62,7 +60,7 @@ function verifySchnorr(bytes32 hash, bytes memory sig) internal pure returns (bo
     bytes32 sp = bytes32(Q - mulmod(uint256(s), uint256(px), Q));
     bytes32 ep = bytes32(Q - mulmod(uint256(e), uint256(px), Q));
 
-    require(sp != 0);
+    require(sp != Q);
     // the ecrecover precompile implementation checks that the `r` and `s`
     // inputs are non-zero (in this case, `px` and `ep`), thus we don't need to
     // check if they're zero.

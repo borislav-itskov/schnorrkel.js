@@ -101,3 +101,7 @@ node_modules/
 !.yarn/versions
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,asdf,yarn,react,node
+
+# Hardhat files
+cache
+artifacts

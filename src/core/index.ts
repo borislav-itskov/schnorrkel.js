@@ -160,7 +160,7 @@ export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Uint8Ar
 }
 
 const areBuffersSame = (buf1: Uint8Array, buf2: Uint8Array): boolean => {
-  if (buf1.byteLength != buf2.byteLength) return false;
+  if (buf1.byteLength != buf2.byteLength) return false
 
   var dv1 = new Int8Array(buf1)
   var dv2 = new Int8Array(buf2)
@@ -168,12 +168,12 @@ const areBuffersSame = (buf1: Uint8Array, buf2: Uint8Array): boolean => {
     if (dv1[i] != dv2[i]) return false
   }
 
-  return true;
+  return true
 }
 
 const challenge = (R: Uint8Array, msgHash: string, publicKey: Uint8Array): Uint8Array => {
   // convert R to address
-  var R_uncomp = secp256k1.publicKeyConvert(R, false);
+  var R_uncomp = secp256k1.publicKeyConvert(R, false)
   var R_addr = ethers.utils.arrayify(ethers.utils.keccak256(R_uncomp.slice(1, 65))).slice(12, 32)
 
   // e = keccak256(address(R) || compressed publicKey || msgHash)
@@ -187,7 +187,7 @@ const challenge = (R: Uint8Array, msgHash: string, publicKey: Uint8Array): Uint8
 
 export const _sumSigs = (signatures: Uint8Array[]): Buffer => {
   let combined = bigi.fromBuffer(signatures[0])
-  signatures.shift();
+  signatures.shift()
   signatures.forEach(sig => {
     combined = combined.add(bigi.fromBuffer(sig))
   })

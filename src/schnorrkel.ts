@@ -116,8 +116,8 @@ class Schnorrkel {
     return new Signature(Buffer.from(sum))
   }
 
-  static verify(signaturesSummed: Signature, msg: string, finalPublicNonce: FinalPublicNonce, publicKey: Key): boolean {
-    return _verify(signaturesSummed.buffer, msg, finalPublicNonce.buffer, publicKey.buffer)
+  static verify(signature: Signature, msg: string, finalPublicNonce: FinalPublicNonce, publicKey: Key): boolean {
+    return _verify(signature.buffer, msg, finalPublicNonce.buffer, publicKey.buffer)
   }
 }
 
