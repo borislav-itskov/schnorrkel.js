@@ -2,9 +2,23 @@
   "name": "@borislav.itskov/schnorrkel.js",
   "version": "1.1.0",
   "description": "",
-  "main": "index.ts",
+  "type": "module",
+  "main": "dist/es5/index.js",
+  "module": "dist/es6/index.js",
+  "engines": {
+    "node": ">=16.0.0, <20.0.0"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
-    "test": "hardhat test"
+    "build": "tsc --declaration && tsc -p tsconfig.es5.json --declaration",
+    "watch": "tsc -w",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest watch"
   },
   "author": "",
   "license": "ISC",
@@ -14,19 +28,16 @@
     "ethers": "^5.7",
     "secp256k1": "^5.0.0"
   },
+  "devDependencies": {
+    "@types/ecurve": "^1.0.0",
+    "@types/elliptic": "^6.4.14",
+    "@types/secp256k1": "^4.0.3",
+    "@vitest/coverage-c8": "^0.29.2",
+    "typescript": "^4.9.5",
+    "vitest": "^0.29.2"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/borislav-itskov/schnorrkel.js"
-  },
-  "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
-    "@types/chai": "^4.3.5",
-    "@types/mocha": "^10.0.1",
-    "@types/node": "^20.2.0",
-    "chai": "^4.3.7",
-    "chai-assertions-count": "^1.0.2",
-    "hardhat": "^2.13.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.0.4"
   }
 }
