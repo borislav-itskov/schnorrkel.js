@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ethers } from 'ethers'
 import Schnorrkel, { Key } from '../../src/index'
 import { compile } from '../../utils/compile.js'
-import { wallet } from '../config.js'
+import { wallet2 } from '../config.js'
 import DefaultSigner from '../../utils/DefaultSigner'
 import { _generatePk } from '../../src/core'
 const ERC1271_MAGICVALUE_BYTES32 = '0x1626ba7e'
@@ -11,7 +11,7 @@ describe('Multi Sign Tests', function () {
 
   async function deployContract(signerOne: any, signerTwo: any) {
     const SchnorrAccountAbstraction = compile('SchnorrAccountAbstraction')
-    const factory = new ethers.ContractFactory(SchnorrAccountAbstraction.abi, SchnorrAccountAbstraction.bytecode, wallet)
+    const factory = new ethers.ContractFactory(SchnorrAccountAbstraction.abi, SchnorrAccountAbstraction.bytecode, wallet2)
 
     // get the public key
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey([
