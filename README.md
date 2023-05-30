@@ -6,6 +6,19 @@ Blockchain validation via ecrecover is also supported.
 # Typescript support
 Since version 2.0.0, we're moving entirely to Typescript.
 
+## Breaking changes
+* `sign()` and `multiSigSign()` return an instance of `SignatureOutput`. Each element in it has a buffer property
+  * instead of `e` we return `challenge` for the Schnorr Challenge. To accces its value, use `challenge.buffer`
+  * instead of `s` we return `signature` for the Schnorr Signature. To accces its value, use `signature.buffer`
+  * instead of `R` we return `finalPublicNonce` for the nonce. To accces its value, use `finalPublicNonce.buffer`
+* `getCombinedPublicKey()` returns a `Key` class. To get the actual key, use `key.buffer`
+* a lot of method become static as they don't keep any state:
+  * `verify`
+  * `sign`
+  * `sumSigs`
+  * `getCombinedPublicKey`
+  * `getCombinedAddress`
+
 ## Requirements:
 
 * Node: >=16.0.0, <20.0.0
@@ -30,7 +43,7 @@ npm run test
 We refer to Single Signatures as ones that have a single signer.
 
 Sign:
-```
+```js
 import Schnorrkel from 'schnorrkel'
 
 const privateKey = randomBytes(32) // Buffer
@@ -39,7 +52,7 @@ const {signature, finalPublicNonce} = Schnorrkel.sign(privateKey, msg)
 ```
 
 Offchain verification:
-```
+```js
 const publicKey: Uint8Array = ... (derived from the privateKey)
 // signature and finalPublicNonce come from s
 const result = Schnorrkel.verify(signature, msg, finalPublicNonce, publicKey)
@@ -49,7 +62,7 @@ Onchain verification:
 
 First, you will need a contract that verifies schnorr. We have it in the repository and it is called `SchnorrAccountAbstraction`.  
 But all in all, you need this onchain:
-```
+```js
 function verifySchnorr(bytes32 hash, bytes memory sig) internal pure returns (bool) {
     // px := public key x-coord
     // e := schnorr signature challenge
@@ -74,7 +87,7 @@ We explain how ecrecover works and why it is needed later [in this document](#ec
 Let's send a request to the local hardhat node. First run in the terminal:  
 npx hardhat node  
 Afterwards, here is part of the code:
-```
+```js
 import { ethers } from 'ethers'
 import secp256k1 from 'secp256k1'
 
@@ -113,7 +126,7 @@ Below are all the steps needed to craft a successful multisig.
 
 Public nonces need to be exchanged between signers before they sign. Normally, the Signer should implement this library as define a `getPublicNonces` method that will call the library and return the nonces. For our test example, we're going to call the schnorrkel library directly:
 
-```
+```js
 const privateKey1: Uint8Array = '...'
 const privateKey2: Uint8Array = '...'
 const publicNonces1 = schnorrkel.generatePublicNonces(privateKey1);
@@ -126,7 +139,7 @@ Again, this isn't how the flow is supposed to work. A signer needs to implement 
 
 After we have them, here is how to sign:
 
-```
+```js
 const publicKey1: Uint8Array = '...'
 const publicKey2: Uint8Array = '...'
 const publicKeys = [publicKey1, publicKey2];
@@ -138,14 +151,14 @@ const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
 #### verify onchain
 
-```
-const px = combinedPublicKey.slice(1,33);
-const parity = combinedPublicKey[0] - 2 + 27;
+```js
+const px = combinedPublicKey.buffer.slice(1,33);
+const parity = combinedPublicKey.buffer[0] - 2 + 27;
 const abiCoder = new ethers.utils.AbiCoder();
 const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
     px,
-    e,
-    sSummed,
+    challenge.buffer,
+    sSummed.buffer,
     parity
 ]);
 const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
@@ -154,8 +167,8 @@ const result = await contract.isValidSignature(msgHash, sigData);
 
 #### verify offchain
 
-```
-const result = schnorrkel.verify(sSummed, msg, R, combinedPublicKey);
+```js
+const result = schnorrkel.verify(sSummed, msg, finalPublicNonce, combinedPublicKey);
 ```
 
 You can find reference to this in `tests/schnorrkel/onchainMultiSign.test.ts` in this repository.
