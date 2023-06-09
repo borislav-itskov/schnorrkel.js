@@ -66,7 +66,7 @@ class Schnorrkel {
     delete this.nonces[hash]
   }
 
-  multiSigSign(privateKey: Key, msg: string, publicKeys: Key[], publicNonces: PublicNonces[]): SignatureOutput {
+  multiSigSign(privateKey: Key, msg: string, publicKeys: Key[], publicNonces: PublicNonces[], hashFn: Function|null = null): SignatureOutput {
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
     const mappedPublicNonce: InternalPublicNonces[] = publicNonces.map(publicNonce => {
       return {
@@ -87,7 +87,7 @@ class Schnorrkel {
       ]
     }))
 
-    const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, msg, publicKeys.map(key => key.buffer), mappedPublicNonce)
+    const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, msg, publicKeys.map(key => key.buffer), mappedPublicNonce, hashFn)
 
     // absolutely crucial to delete the nonces once a signature has been crafted with them.
     // nonce reusae will lead to private key leakage!
@@ -100,8 +100,8 @@ class Schnorrkel {
     }
   }
 
-  static sign(privateKey: Key, msg: string): SignatureOutput {
-    const output = _sign(privateKey.buffer, msg)
+  static sign(privateKey: Key, msg: string, hashFn: Function|null = null): SignatureOutput {
+    const output = _sign(privateKey.buffer, msg, hashFn)
 
     return {
       signature: new Signature(Buffer.from(output.signature)),
@@ -116,8 +116,14 @@ class Schnorrkel {
     return new Signature(Buffer.from(sum))
   }
 
-  static verify(signature: Signature, msg: string, finalPublicNonce: FinalPublicNonce, publicKey: Key): boolean {
-    return _verify(signature.buffer, msg, finalPublicNonce.buffer, publicKey.buffer)
+  static verify(
+    signature: Signature,
+    msg: string,
+    finalPublicNonce: FinalPublicNonce,
+    publicKey: Key,
+    hashFn: Function|null = null
+  ): boolean {
+    return _verify(signature.buffer, msg, finalPublicNonce.buffer, publicKey.buffer, hashFn)
   }
 }
 

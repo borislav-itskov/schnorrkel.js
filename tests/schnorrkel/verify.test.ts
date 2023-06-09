@@ -83,4 +83,55 @@ describe('testing verify', () => {
 
     expect(result).toEqual(true)
   })
+  it('should verify a schnorr signature with a custom hash function', () => {
+    const privateKey = new Key(Buffer.from(ethers.utils.randomBytes(32)))
+
+    const abiCoder = new ethers.utils.AbiCoder()
+    const msg = abiCoder.encode(['string'], ['test message'])
+    const hashFn = ethers.utils.keccak256
+    const signature = Schnorrkel.sign(privateKey, msg, hashFn)
+
+    const publicKey = ethers.utils.arrayify(
+      ethers.utils.computePublicKey(ethers.utils.computePublicKey(privateKey.buffer, false), true)
+    )
+
+    expect(signature).toBeDefined()
+    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.signature.buffer).toHaveLength(32)
+    expect(signature.challenge.buffer).toHaveLength(32)
+    const result = Schnorrkel.verify(
+      signature.signature,
+      msg,
+      signature.finalPublicNonce,
+      new Key(Buffer.from(publicKey)),
+      hashFn
+    )
+    expect(result).toEqual(true)
+  })
+  it('should sum the signatures and verify them using a custom hash function for the message', () => {
+    const schnorrkelOne = new Schnorrkel()
+    const schnorrkelTwo = new Schnorrkel()
+
+    const keyPairOne = generateRandomKeys()
+    const keyPairTwo = generateRandomKeys()
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+
+    const publicNonces = [publicNoncesOne, publicNoncesTwo]
+    const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
+
+    const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
+
+    const abiCoder = new ethers.utils.AbiCoder()
+    const msg = abiCoder.encode(['string'], ['test message'])
+    const hashFn = ethers.utils.keccak256
+    const signatureOne = schnorrkelOne.multiSigSign(keyPairOne.privateKey, msg, publicKeys, publicNonces, hashFn)
+    const signatureTwo = schnorrkelTwo.multiSigSign(keyPairTwo.privateKey, msg, publicKeys, publicNonces, hashFn)
+
+    const signatures = [signatureOne.signature, signatureTwo.signature]
+    const signaturesSummed = Schnorrkel.sumSigs(signatures)
+    const result = Schnorrkel.verify(signaturesSummed, msg, signatureTwo.finalPublicNonce, combinedPublicKey, hashFn)
+
+    expect(result).toEqual(true)
+  })
 })

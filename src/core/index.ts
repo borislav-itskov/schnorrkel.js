@@ -102,7 +102,7 @@ const _generateNonce = (): InternalNoncePairs => {
   }
 }
 
-export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Uint8Array, privateKey: Uint8Array, msg: string, publicKeys: Uint8Array[], publicNonces: InternalPublicNonces[]): InternalSignature => {
+export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Uint8Array, privateKey: Uint8Array, msg: string, publicKeys: Uint8Array[], publicNonces: InternalPublicNonces[], hashFn: Function|null = null): InternalSignature => {
   if (publicKeys.length < 2) {
     throw Error('At least 2 public keys should be provided')
   }
@@ -115,7 +115,8 @@ export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Uint8Ar
 
   const publicKey = secp256k1.publicKeyCreate(localPk)
   const L = _generateL(publicKeys)
-  const msgHash = _hashMessage(msg)
+  const hashMsg = hashFn ? hashFn : _hashMessage
+  const msgHash = hashMsg(msg)
   const a = _aCoefficient(publicKey, L)
   const b = _bCoefficient(combinedPublicKey, msgHash, publicNonces)
 
@@ -199,8 +200,9 @@ export const _hashMessage = (message: string): string => {
   return ethers.utils.solidityKeccak256(['string'], [message])
 }
 
-export const _verify = (s: Uint8Array, msg: string, R: Uint8Array, publicKey: Uint8Array): boolean => {
-  const hash = _hashMessage(msg)
+export const _verify = (s: Uint8Array, msg: string, R: Uint8Array, publicKey: Uint8Array, hashFn: Function|null = null): boolean => {
+  const hashMsg = hashFn ? hashFn : _hashMessage
+  const hash = hashMsg(msg)
   const eC = challenge(R, hash, publicKey)
   const sG = generatorPoint.mul(ethers.utils.arrayify(s))
   const P = ec.keyFromPublic(publicKey).getPublic()
@@ -216,9 +218,10 @@ export const _generatePk = (combinedPublicKey: Uint8Array): string => {
   return '0x' + px.slice(px.length - 40, px.length)
 }
 
-export const _sign = (privateKey: Uint8Array, msg: string): InternalSignature  => {
+export const _sign = (privateKey: Uint8Array, msg: string, hashFn: Function|null = null): InternalSignature  => {
+  const hashMsg = hashFn ? hashFn : _hashMessage
   const localPk = new Uint8Array(privateKey)
-  const hash = _hashMessage(msg)
+  const hash = hashMsg(msg)
   const publicKey = secp256k1.publicKeyCreate((localPk as any))
 
   // R = G * k
