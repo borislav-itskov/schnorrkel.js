@@ -2,8 +2,8 @@
   "name": "@borislav.itskov/schnorrkel.js",
   "version": "2.0.2",
   "description": "",
-  "main": "dist/es5/index.js",
-  "module": "dist/es6/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "engines": {
     "node": ">=16.0.0, <20.0.0"
   },
@@ -13,7 +13,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc --declaration && tsc -p tsconfig.es5.json --declaration",
+    "build": "tsc",
     "watch": "tsc -w",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
