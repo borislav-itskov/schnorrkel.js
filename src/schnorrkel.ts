@@ -59,6 +59,16 @@ class Schnorrkel {
     }
   }
 
+  getPublicNonces(privateKey: Key): PublicNonces {
+    const hash = _hashPrivateKey(privateKey.buffer)
+    const nonce = this.nonces[hash]
+
+    return {
+      kPublic: nonce.kPublic,
+      kTwoPublic: nonce.kTwoPublic,
+    }
+  }
+
   private clearNonces(privateKey: Key): void {
     const x = privateKey.buffer
     const hash = _hashPrivateKey(x)
