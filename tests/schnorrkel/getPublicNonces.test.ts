@@ -4,7 +4,7 @@ import Schnorrkel from '../../src/index'
 import { _hashPrivateKey, generateRandomKeys } from '../../src/core'
 
 
-describe('testing generatePublicNonces', () => {
+describe('testing getPublicNonces', () => {
   it('should generate the public nonces and afterwards get them successfully', () => {
     const schnorrkel = new Schnorrkel()
 

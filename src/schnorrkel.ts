@@ -69,6 +69,11 @@ class Schnorrkel {
     }
   }
 
+  hasNonces(privateKey: Key): boolean {
+    const hash = _hashPrivateKey(privateKey.buffer)
+    return hash in this.nonces
+  }
+
   private clearNonces(privateKey: Key): void {
     const x = privateKey.buffer
     const hash = _hashPrivateKey(x)
