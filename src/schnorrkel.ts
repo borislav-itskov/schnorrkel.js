@@ -2,7 +2,7 @@ import secp256k1 from 'secp256k1'
 
 import { Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign } from './core'
+import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign, _signHash } from './core'
 import { InternalNonces, InternalPublicNonces } from './core/types'
 import { Challenge, FinalPublicNonce, SignatureOutput } from './types/signature'
 
@@ -105,7 +105,7 @@ class Schnorrkel {
     const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, msg, publicKeys.map(key => key.buffer), mappedPublicNonce, hashFn)
 
     // absolutely crucial to delete the nonces once a signature has been crafted with them.
-    // nonce reusae will lead to private key leakage!
+    // nonce reuse will lead to private key leakage!
     this.clearNonces(privateKey)
 
     return {
@@ -117,6 +117,16 @@ class Schnorrkel {
 
   static sign(privateKey: Key, msg: string, hashFn: Function|null = null): SignatureOutput {
     const output = _sign(privateKey.buffer, msg, hashFn)
+
+    return {
+      signature: new Signature(Buffer.from(output.signature)),
+      finalPublicNonce: new FinalPublicNonce(Buffer.from(output.finalPublicNonce)),
+      challenge: new Challenge(Buffer.from(output.challenge)),
+    }
+  }
+
+  static signHash(privateKey: Key, hash: string): SignatureOutput {
+    const output = _signHash(privateKey.buffer, hash)
 
     return {
       signature: new Signature(Buffer.from(output.signature)),

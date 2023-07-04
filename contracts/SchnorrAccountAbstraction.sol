@@ -34,10 +34,11 @@ contract SchnorrAccountAbstraction {
 		bytes32 sp = bytes32(Q - mulmod(uint256(s), uint256(px), Q));
 		bytes32 ep = bytes32(Q - mulmod(uint256(e), uint256(px), Q));
 
-		require(sp != 0);
+		require(uint256(sp) != Q);
 		// the ecrecover precompile implementation checks that the `r` and `s`
 		// inputs are non-zero (in this case, `px` and `ep`), thus we don't need to
 		// check if they're zero.
+		// ecrecover(hash, v, r, s);
 		address R = ecrecover(sp, parity, px, ep);
 		require(R != address(0), "ecrecover failed");
 		return e == keccak256(abi.encodePacked(R, uint8(parity), px, hash))
