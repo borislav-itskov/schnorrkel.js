@@ -134,4 +134,22 @@ describe('testing verify', () => {
 
     expect(result).toEqual(true)
   })
+  it('should verify a signature hash', () => {
+    const privateKey = new Key(Buffer.from(ethers.utils.randomBytes(32)))
+
+    const msg = 'test message'
+    const hash = ethers.utils.solidityKeccak256(['string'], [msg])
+    const signature = Schnorrkel.signHash(privateKey, hash)
+
+    const publicKey = ethers.utils.arrayify(
+      ethers.utils.computePublicKey(ethers.utils.computePublicKey(privateKey.buffer, false), true)
+    )
+
+    expect(signature).toBeDefined()
+    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.signature.buffer).toHaveLength(32)
+    expect(signature.challenge.buffer).toHaveLength(32)
+    const result = Schnorrkel.verifyHash(signature.signature, hash, signature.finalPublicNonce, new Key(Buffer.from(publicKey)))
+    expect(result).toEqual(true)
+  })
 })

@@ -98,6 +98,26 @@ const internalSign = (privateKey: Uint8Array, hash: string): InternalSignature =
   }
 }
 
+/**
+ * Verify a signature for the given hash, public nonce and public key
+ *
+ * @param Uint8Array s
+ * @param string hash
+ * @param Uint8Array R
+ * @param Uint8Array publicKey
+ * @returns boolean
+ */
+const internalVerify = (s: Uint8Array, hash: string, R: Uint8Array, publicKey: Uint8Array): boolean => {
+  const eC = challenge(R, hash, publicKey)
+  const sG = generatorPoint.mul(ethers.utils.arrayify(s))
+  const P = ec.keyFromPublic(publicKey).getPublic()
+  const bnEC = new BN(Buffer.from(eC).toString('hex'), 'hex')
+  const Pe = P.mul(bnEC)
+  const toPublicR = ec.keyFromPublic(R).getPublic()
+  const RplusPe = toPublicR.add(Pe)
+  return sG.eq(RplusPe)
+}
+
 export const _generateL = (publicKeys: Array<Uint8Array>) => {
   return ethers.utils.keccak256(_concatTypedArrays(publicKeys.sort()))
 }
@@ -232,14 +252,11 @@ export const _hashMessage = (message: string): string => {
 export const _verify = (s: Uint8Array, msg: string, R: Uint8Array, publicKey: Uint8Array, hashFn: Function|null = null): boolean => {
   const hashMsg = hashFn ? hashFn : _hashMessage
   const hash = hashMsg(msg)
-  const eC = challenge(R, hash, publicKey)
-  const sG = generatorPoint.mul(ethers.utils.arrayify(s))
-  const P = ec.keyFromPublic(publicKey).getPublic()
-  const bnEC = new BN(Buffer.from(eC).toString('hex'), 'hex')
-  const Pe = P.mul(bnEC)
-  const toPublicR = ec.keyFromPublic(R).getPublic()
-  const RplusPe = toPublicR.add(Pe)
-  return sG.eq(RplusPe)
+  return internalVerify(s, hash, R, publicKey)
+}
+
+export const _verifyHash = (s: Uint8Array, hash: string, R: Uint8Array, publicKey: Uint8Array): boolean  => {
+  return internalVerify(s, hash, R, publicKey)
 }
 
 export const _generatePk = (combinedPublicKey: Uint8Array): string => {

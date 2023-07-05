@@ -2,7 +2,7 @@ import secp256k1 from 'secp256k1'
 
 import { Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign, _signHash } from './core'
+import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign, _signHash, _verifyHash } from './core'
 import { InternalNonces, InternalPublicNonces } from './core/types'
 import { Challenge, FinalPublicNonce, SignatureOutput } from './types/signature'
 
@@ -149,6 +149,15 @@ class Schnorrkel {
     hashFn: Function|null = null
   ): boolean {
     return _verify(signature.buffer, msg, finalPublicNonce.buffer, publicKey.buffer, hashFn)
+  }
+
+  static verifyHash(
+    signature: Signature,
+    hash: string,
+    finalPublicNonce: FinalPublicNonce,
+    publicKey: Key
+  ): boolean {
+    return _verifyHash(signature.buffer, hash, finalPublicNonce.buffer, publicKey.buffer)
   }
 }
 
