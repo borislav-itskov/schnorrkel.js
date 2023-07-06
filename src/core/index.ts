@@ -88,13 +88,71 @@ const internalSign = (privateKey: Uint8Array, hash: string): InternalSignature =
   // xe = x * e
   var xe = secp256k1.privateKeyTweakMul((localPk as any), e)
 
-  // s = k + xe
+  // s = k + xe mod(n)
   var s = secp256k1.privateKeyTweakAdd(k, xe)
+  s = bigi.fromBuffer(s).mod(n).toBuffer(32)
 
   return {
     finalPublicNonce: R,
     challenge: e,
     signature: s
+  }
+}
+
+const internalMultiSigSign = (nonces: InternalNonces, combinedPublicKey: Uint8Array, privateKey: Uint8Array, hash: string, publicKeys: Uint8Array[], publicNonces: InternalPublicNonces[]): InternalSignature => {
+  if (publicKeys.length < 2) {
+    throw Error('At least 2 public keys should be provided')
+  }
+
+  const localPk = new Uint8Array(privateKey)
+  const xHashed = _hashPrivateKey(localPk)
+  if (!(xHashed in nonces) || Object.keys(nonces[xHashed]).length === 0) {
+    throw Error('Nonces should be exchanged before signing')
+  }
+
+  const publicKey = secp256k1.publicKeyCreate(localPk)
+  const L = _generateL(publicKeys)
+  const a = _aCoefficient(publicKey, L)
+  const b = _bCoefficient(combinedPublicKey, hash, publicNonces)
+
+  const effectiveNonces = publicNonces.map((batch) => {
+    return secp256k1.publicKeyCombine([batch.kPublic, secp256k1.publicKeyTweakMul(batch.kTwoPublic, b)])
+  })
+  const signerEffectiveNonce = secp256k1.publicKeyCombine([
+    nonces[xHashed].kPublic,
+    secp256k1.publicKeyTweakMul(nonces[xHashed].kTwoPublic, b)
+  ])
+  const inArray = effectiveNonces.filter(nonce => areBuffersSame(nonce, signerEffectiveNonce)).length != 0
+  if (!inArray) {
+    throw Error('Passed nonces are invalid')
+  }
+
+  const R = secp256k1.publicKeyCombine(effectiveNonces)
+  const e = challenge(R, hash, combinedPublicKey)
+
+  const { k, kTwo } = nonces[xHashed]
+
+  // xe = x * e
+  const xe = secp256k1.privateKeyTweakMul(localPk, e)
+
+  // xea = a * xe
+  const xea = secp256k1.privateKeyTweakMul(xe, a)
+
+  // k + xea
+  const kPlusxea = secp256k1.privateKeyTweakAdd(xea, k)
+
+  // kTwo * b
+  const kTwoMulB = secp256k1.privateKeyTweakMul(kTwo, b)
+
+  // k + kTwoMulB + xea
+  const final = secp256k1.privateKeyTweakAdd(kPlusxea, kTwoMulB)
+
+
+  return {
+    // s = k + xea mod(n)
+    signature: bigi.fromBuffer(final).mod(n).toBuffer(32),
+    challenge: e,
+    finalPublicNonce: R
   }
 }
 
@@ -178,62 +236,13 @@ export const _generatePublicNonces = (privateKey: Buffer): {
 }
 
 export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Uint8Array, privateKey: Uint8Array, msg: string, publicKeys: Uint8Array[], publicNonces: InternalPublicNonces[], hashFn: Function|null = null): InternalSignature => {
-  if (publicKeys.length < 2) {
-    throw Error('At least 2 public keys should be provided')
-  }
-
-  const localPk = new Uint8Array(privateKey)
-  const xHashed = _hashPrivateKey(localPk)
-  if (!(xHashed in nonces) || Object.keys(nonces[xHashed]).length === 0) {
-    throw Error('Nonces should be exchanged before signing')
-  }
-
-  const publicKey = secp256k1.publicKeyCreate(localPk)
-  const L = _generateL(publicKeys)
   const hashMsg = hashFn ? hashFn : _hashMessage
-  const msgHash = hashMsg(msg)
-  const a = _aCoefficient(publicKey, L)
-  const b = _bCoefficient(combinedPublicKey, msgHash, publicNonces)
+  const hash = hashMsg(msg)
+  return internalMultiSigSign(nonces, combinedPublicKey, privateKey, hash, publicKeys, publicNonces)
+}
 
-  const effectiveNonces = publicNonces.map((batch) => {
-    return secp256k1.publicKeyCombine([batch.kPublic, secp256k1.publicKeyTweakMul(batch.kTwoPublic, b)])
-  })
-  const signerEffectiveNonce = secp256k1.publicKeyCombine([
-    nonces[xHashed].kPublic,
-    secp256k1.publicKeyTweakMul(nonces[xHashed].kTwoPublic, b)
-  ])
-  const inArray = effectiveNonces.filter(nonce => areBuffersSame(nonce, signerEffectiveNonce)).length != 0
-  if (!inArray) {
-    throw Error('Passed nonces are invalid')
-  }
-
-  const R = secp256k1.publicKeyCombine(effectiveNonces)
-  const e = challenge(R, msgHash, combinedPublicKey)
-
-  const { k, kTwo } = nonces[xHashed]
-
-  // xe = x * e
-  const xe = secp256k1.privateKeyTweakMul(localPk, e)
-
-  // xea = a * xe
-  const xea = secp256k1.privateKeyTweakMul(xe, a)
-
-  // k + xea
-  const kPlusxea = secp256k1.privateKeyTweakAdd(xea, k)
-
-  // kTwo * b
-  const kTwoMulB = secp256k1.privateKeyTweakMul(kTwo, b)
-
-  // k + kTwoMulB + xea
-  const final = secp256k1.privateKeyTweakAdd(kPlusxea, kTwoMulB)
-
-
-  return {
-    // s = k + xea mod(n)
-    signature: bigi.fromBuffer(final).mod(n).toBuffer(32),
-    challenge: e,
-    finalPublicNonce: R
-  }
+export const _multiSigSignHash = (nonces: InternalNonces, combinedPublicKey: Uint8Array, privateKey: Uint8Array, hash: string, publicKeys: Uint8Array[], publicNonces: InternalPublicNonces[]): InternalSignature => {
+  return internalMultiSigSign(nonces, combinedPublicKey, privateKey, hash, publicKeys, publicNonces)
 }
 
 export const _sumSigs = (signatures: Uint8Array[]): Buffer => {

@@ -152,4 +152,28 @@ describe('testing verify', () => {
     const result = Schnorrkel.verifyHash(signature.signature, hash, signature.finalPublicNonce, new Key(Buffer.from(publicKey)))
     expect(result).toEqual(true)
   })
+
+  it('should verify a multi signature hash', () => {
+    const schnorrkelOne = new Schnorrkel()
+    const schnorrkelTwo = new Schnorrkel()
+
+    const keyPairOne = generateRandomKeys()
+    const keyPairTwo = generateRandomKeys()
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+
+    const publicNonces = [publicNoncesOne, publicNoncesTwo]
+    const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
+
+    const msg = 'test message'
+    const hash = ethers.utils.solidityKeccak256(['string'], [msg])
+    const signature = schnorrkelOne.multiSigSignHash(keyPairOne.privateKey, hash, publicKeys, publicNonces)
+    const signatureTwo = schnorrkelTwo.multiSigSignHash(keyPairTwo.privateKey, hash, publicKeys, publicNonces)
+    const signatures = [signature.signature, signatureTwo.signature]
+    const signaturesSummed = Schnorrkel.sumSigs(signatures)
+
+    const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
+    const result = Schnorrkel.verifyHash(signaturesSummed, hash, signature.finalPublicNonce, combinedPublicKey)
+    expect(result).toEqual(true)
+  })
 })
