@@ -177,7 +177,7 @@ const internalVerify = (s: Uint8Array, hash: string, R: Uint8Array, publicKey: U
 }
 
 export const _generateL = (publicKeys: Array<Uint8Array>) => {
-  return ethers.utils.keccak256(_concatTypedArrays(publicKeys.sort()))
+  return ethers.utils.keccak256(_concatTypedArrays(publicKeys.sort(Buffer.compare)))
 }
 
 export const _concatTypedArrays = (publicKeys: Uint8Array[]): Uint8Array => {
