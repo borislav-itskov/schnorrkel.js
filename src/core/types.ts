@@ -1,26 +1,26 @@
 export interface InternalNoncePairs {
-  readonly k: Uint8Array,
-  readonly kTwo: Uint8Array,
-  readonly kPublic: Uint8Array,
-  readonly kTwoPublic: Uint8Array,
+  readonly k: Buffer,
+  readonly kTwo: Buffer,
+  readonly kPublic: Buffer,
+  readonly kTwoPublic: Buffer,
 }
 
 export interface InternalPublicNonces {
-  readonly kPublic: Uint8Array,
-  readonly kTwoPublic: Uint8Array,
+  readonly kPublic: Buffer,
+  readonly kTwoPublic: Buffer,
 }
 
 export interface InternalSignature {
-  finalPublicNonce: Uint8Array, // the final public nonce
-  challenge: Uint8Array, // the schnorr challenge
-  signature: Uint8Array, // the signature
+  finalPublicNonce: Buffer, // the final public nonce
+  challenge: Buffer, // the schnorr challenge
+  signature: Buffer, // the signature
 }
 
 export interface InternalNoncePairs {
-  readonly k: Uint8Array,
-  readonly kTwo: Uint8Array,
-  readonly kPublic: Uint8Array,
-  readonly kTwoPublic: Uint8Array,
+  readonly k: Buffer,
+  readonly kTwo: Buffer,
+  readonly kPublic: Buffer,
+  readonly kTwoPublic: Buffer,
 }
 
 export type InternalNonces = {
