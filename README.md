@@ -53,7 +53,7 @@ const {signature, finalPublicNonce} = Schnorrkel.sign(privateKey, msg)
 
 Offchain verification:
 ```js
-const publicKey: Uint8Array = ... (derived from the privateKey)
+const publicKey: Buffer = ... (derived from the privateKey)
 // signature and finalPublicNonce come from s
 const result = Schnorrkel.verify(signature, msg, finalPublicNonce, publicKey)
 ```
@@ -95,7 +95,7 @@ const address = 'input schnorr generated address here'
 const factory = new ethers.ContractFactory(SchnorrAccountAbstraction.abi, SchnorrAccountAbstraction.bytecode, wallet)
 const contract: any = await factory.deploy([address])
 
-const privateKey: Uint8Array = '...'
+const privateKey: Buffer = '...'
 const pkBuffer = new Key(Buffer.from(ethers.utils.arrayify(privateKey)))
 const msg = 'just a test message';
 const sig = schnorrkel.sign(msg, privateKey);
@@ -127,8 +127,8 @@ Below are all the steps needed to craft a successful multisig.
 Public nonces need to be exchanged between signers before they sign. Normally, the Signer should implement this library as define a `getPublicNonces` method that will call the library and return the nonces. For our test example, we're going to call the schnorrkel library directly:
 
 ```js
-const privateKey1: Uint8Array = '...'
-const privateKey2: Uint8Array = '...'
+const privateKey1: Buffer = '...'
+const privateKey2: Buffer = '...'
 const publicNonces1 = schnorrkel.generatePublicNonces(privateKey1);
 const publicNonces2 = schnorrkel.generatePublicNonces(privateKey2);
 ```
@@ -140,8 +140,8 @@ Again, this isn't how the flow is supposed to work. A signer needs to implement 
 After we have them, here is how to sign:
 
 ```js
-const publicKey1: Uint8Array = '...'
-const publicKey2: Uint8Array = '...'
+const publicKey1: Buffer = '...'
+const publicKey2: Buffer = '...'
 const publicKeys = [publicKey1, publicKey2];
 const combinedPublicKey = schnorrkel.getCombinedPublicKey(publicKeys)
 const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
