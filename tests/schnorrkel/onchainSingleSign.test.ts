@@ -31,9 +31,9 @@ describe('Single Sign Tests', function () {
 
     // sign
     const msg = 'just a test message'
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
-    const pkBuffer = new Key(Buffer.from(ethers.utils.arrayify(pk1)))
-    const sig = Schnorrkel.sign(pkBuffer, msgHash)
+    const msgHash = ethers.utils.hashMessage(msg)
+    const privateKey = new Key(Buffer.from(ethers.utils.arrayify(pk1)))
+    const sig = Schnorrkel.sign(privateKey, msgHash)
 
     // wrap the result
     const publicKey = secp256k1.publicKeyCreate(ethers.utils.arrayify(pk1))

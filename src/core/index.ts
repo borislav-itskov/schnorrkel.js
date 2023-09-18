@@ -1,18 +1,12 @@
 import { ethers } from 'ethers'
 import secp256k1 from 'secp256k1'
-import ecurve from 'ecurve'
-import elliptic from 'elliptic'
+import ecurve, { Point } from 'ecurve'
 import bigi from 'bigi'
-import { BN } from 'bn.js'
-
 import { InternalNoncePairs, InternalNonces, InternalPublicNonces, InternalSignature } from './types'
 import { KeyPair } from '../types'
 
 const curve = ecurve.getCurveByName('secp256k1')
-const n = curve?.n
-const EC = elliptic.ec
-const ec = new EC('secp256k1')
-const generatorPoint = ec.g
+const n = curve.n
 
 const _generateNonce = (): InternalNoncePairs => {
   const k = Buffer.from(ethers.utils.randomBytes(32))
@@ -193,13 +187,13 @@ export const _sumSigs = (signatures: Buffer[]): Buffer => {
 
 export const _verify = (s: Buffer, hash: string, R: Buffer, publicKey: Buffer): boolean  => {
   const eC = challenge(R, hash, publicKey)
-  const sG = generatorPoint.mul(ethers.utils.arrayify(s))
-  const P = ec.keyFromPublic(publicKey).getPublic()
-  const bnEC = new BN(Buffer.from(eC).toString('hex'), 'hex')
-  const Pe = P.mul(bnEC)
-  const toPublicR = ec.keyFromPublic(R).getPublic()
-  const RplusPe = toPublicR.add(Pe)
-  return sG.eq(RplusPe)
+
+  const sG = curve.G.multiply(bigi.fromBuffer(s))
+  const PasPoint = Point.decodeFrom(curve, publicKey)
+  const Pe = PasPoint.multiply(bigi.fromBuffer(eC))
+  const RasPoint = Point.decodeFrom(curve, R)
+  const RplusPetest = RasPoint.add(Pe)
+  return sG.equals(RplusPetest)
 }
 
 export const _generatePk = (combinedPublicKey: Buffer): string => {
