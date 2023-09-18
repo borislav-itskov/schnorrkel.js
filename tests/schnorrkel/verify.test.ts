@@ -87,12 +87,12 @@ describe('testing verify', () => {
 
     expect(result).toEqual(true)
   })
-  it('should verify a schnorr signature with a custom hash function', () => {
+  it('should verify a schnorr signature with sha256 hash function', () => {
     const privateKey = new Key(Buffer.from(ethers.utils.randomBytes(32)))
 
     const abiCoder = new ethers.utils.AbiCoder()
     const msg = abiCoder.encode(['string'], ['test message'])
-    const msgHash = ethers.utils.keccak256(msg)
+    const msgHash = ethers.utils.sha256(ethers.utils.toUtf8Bytes(msg))
     const signature = Schnorrkel.sign(privateKey, msgHash)
 
     const publicKey = ethers.utils.arrayify(
@@ -105,7 +105,7 @@ describe('testing verify', () => {
     expect(signature.challenge.buffer).toHaveLength(32)
     const result = Schnorrkel.verify(
       signature.signature,
-      ethers.utils.keccak256(msg),
+      msgHash,
       signature.finalPublicNonce,
       new Key(Buffer.from(publicKey))
     )
@@ -137,7 +137,7 @@ describe('testing verify', () => {
 
     expect(result).toEqual(true)
   })
-  it('should verify a signature hash', () => {
+  it('should verify a signature for a msg hashed with solidityKeccak256', () => {
     const privateKey = new Key(Buffer.from(ethers.utils.randomBytes(32)))
 
     const msg = 'test message'
@@ -156,7 +156,7 @@ describe('testing verify', () => {
     expect(result).toEqual(true)
   })
 
-  it('should verify a multi signature hash', () => {
+  it('should verify a multi signature for a msg hashed with solidityKeccak256', () => {
     const schnorrkelOne = new Schnorrkel()
     const schnorrkelTwo = new Schnorrkel()
 
