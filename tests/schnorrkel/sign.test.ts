@@ -9,7 +9,8 @@ describe('testing sign', () => {
     const keyPair = generateRandomKeys()
 
     const msg = 'test message'
-    const signature = Schnorrkel.sign(keyPair.privateKey, msg)
+    const hash = ethers.utils.solidityKeccak256(['string'], [msg])
+    const signature = Schnorrkel.sign(keyPair.privateKey, hash)
 
     expect(signature).toBeDefined()
     expect(signature.finalPublicNonce.buffer).toHaveLength(33)
@@ -22,7 +23,7 @@ describe('testing sign', () => {
 
     const msg = 'test message'
     const hash = ethers.utils.solidityKeccak256(['string'], [msg])
-    const signature = Schnorrkel.signHash(keyPair.privateKey, hash)
+    const signature = Schnorrkel.sign(keyPair.privateKey, hash)
 
     expect(signature).toBeDefined()
     expect(signature.finalPublicNonce.buffer).toHaveLength(33)

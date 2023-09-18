@@ -19,7 +19,7 @@ describe('testing multiSigSign', () => {
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
 
     const msg = 'test message'
-    const signature = schnorrkelOne.multiSigSign(keyPairOne.privateKey, msg, publicKeys, publicNonces)
+    const signature = schnorrkelOne.multiSigSign(keyPairOne.privateKey, ethers.utils.solidityKeccak256(['string'], [msg]), publicKeys, publicNonces)
 
     expect(signature).toBeDefined()
     expect(signature.finalPublicNonce.buffer).toHaveLength(33)
@@ -63,7 +63,7 @@ describe('testing multiSigSign', () => {
 
     const msg = 'test message'
     const hash = ethers.utils.solidityKeccak256(['string'], [msg])
-    const signature = schnorrkelOne.multiSigSignHash(keyPairOne.privateKey, hash, publicKeys, publicNonces)
+    const signature = schnorrkelOne.multiSigSign(keyPairOne.privateKey, hash, publicKeys, publicNonces)
 
     expect(signature).toBeDefined()
     expect(signature.finalPublicNonce.buffer).toHaveLength(33)

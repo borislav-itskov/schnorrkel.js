@@ -31,8 +31,9 @@ describe('Single Sign Tests', function () {
 
     // sign
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const pkBuffer = new Key(Buffer.from(ethers.utils.arrayify(pk1)))
-    const sig = Schnorrkel.sign(pkBuffer, msg)
+    const sig = Schnorrkel.sign(pkBuffer, msgHash)
 
     // wrap the result
     const publicKey = secp256k1.publicKeyCreate(ethers.utils.arrayify(pk1))
@@ -45,7 +46,6 @@ describe('Single Sign Tests', function () {
       sig.signature.buffer,
       parity
     ])
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const result = await contract.isValidSignature(msgHash, sigData)
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32)
   })

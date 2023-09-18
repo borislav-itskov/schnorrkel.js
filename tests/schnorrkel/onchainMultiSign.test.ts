@@ -34,11 +34,12 @@ describe('Multi Sign Tests', function () {
     const { contract } = await deployContract(signerOne, signerTwo)
 
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
-    const {signature: sigTwo} = signerTwo.multiSignMessage(msg, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
+    const {signature: sigTwo} = signerTwo.multiSignMessage(msgHash, publicKeys, publicNonces)
     const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
     // the multisig px and parity
@@ -55,7 +56,6 @@ describe('Multi Sign Tests', function () {
       sSummed.buffer,
       parity
     ])
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const result = await contract.isValidSignature(msgHash, sigData)
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32)
   })
@@ -67,16 +67,16 @@ describe('Multi Sign Tests', function () {
     const { contract } = await deployContract(signerOne, signerTwo)
 
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
-    const {signature: sigTwo} = signerTwo.multiSignMessage(msg, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
+    const {signature: sigTwo} = signerTwo.multiSignMessage(msgHash, publicKeys, publicNonces)
     const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
     // the multisig px and parity
     const px = ethers.utils.hexlify(combinedPublicKey.buffer.slice(1, 33))
-    const combinedPublicAddress = '0x' + px.slice(px.length - 40, px.length)
 
     const parity = combinedPublicKey.buffer[0] - 2 + 27
 
@@ -88,7 +88,6 @@ describe('Multi Sign Tests', function () {
       sSummed.buffer,
       parity
     ])
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const result = await contract.isValidSignature(msgHash, sigData)
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32)
   })
@@ -101,6 +100,7 @@ describe('Multi Sign Tests', function () {
 
     const signerThree = new DefaultSigner(2)
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const publicKeys = [signerOne.getPublicKey(), signerThree.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerThree.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
@@ -108,8 +108,8 @@ describe('Multi Sign Tests', function () {
 //     finalPublicNonce: FinalPublicNonce, // the final public nonce
 //   challenge: Challenge, // the schnorr challenge
 //   signature: Signature, // the signature
-    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
-    const {signature: sigTwo} = signerThree.multiSignMessage(msg, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
+    const {signature: sigTwo} = signerThree.multiSignMessage(msgHash, publicKeys, publicNonces)
     const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
     // the multisig px and parity
@@ -124,7 +124,6 @@ describe('Multi Sign Tests', function () {
       sSummed.buffer,
       parity
     ])
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const result = await contract.isValidSignature(msgHash, sigData)
     expect(result).to.equal('0xffffffff')
   })
@@ -136,10 +135,11 @@ describe('Multi Sign Tests', function () {
     const { contract } = await deployContract(signerOne, signerTwo)
 
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
 
     // the multisig px and parity
     const px = combinedPublicKey.buffer.slice(1,33)
@@ -153,7 +153,6 @@ describe('Multi Sign Tests', function () {
       sigOne.buffer,
       parity
     ])
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const result = await contract.isValidSignature(msgHash, sigData)
     expect(result).to.equal('0xffffffff')
   })
@@ -162,13 +161,14 @@ describe('Multi Sign Tests', function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0)
     const signerTwo = new DefaultSigner(1)
-    const { contract } = await deployContract(signerOne, signerTwo)
+    await deployContract(signerOne, signerTwo)
 
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]    
-    const {signature: s, challenge: e} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
-    expect(signerOne.multiSignMessage.bind(signerOne, msg, publicKeys, publicNonces)).to.throw('Nonces should be exchanged before signing')
+    signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
+    expect(signerOne.multiSignMessage.bind(signerOne, msgHash, publicKeys, publicNonces)).to.throw('Nonces should be exchanged before signing')
   })
 
   it('should fail if only one signer tries to sign the transaction providing 2 messages', async function () {
@@ -178,13 +178,14 @@ describe('Multi Sign Tests', function () {
     const { contract } = await deployContract(signerOne, signerTwo)
 
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const signerTwoNonces = signerTwo.getPublicNonces()
     const publicNonces = [signerOne.getPublicNonces(), signerTwoNonces]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
     const publicNoncesTwo = [signerOne.getPublicNonces(), signerTwoNonces]
-    const {signature: sigTwo} = signerOne.multiSignMessage(msg, publicKeys, publicNoncesTwo)
+    const {signature: sigTwo} = signerOne.multiSignMessage(msgHash, publicKeys, publicNoncesTwo)
     const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
     // the multisig px and parity
@@ -199,7 +200,6 @@ describe('Multi Sign Tests', function () {
       sSummed.buffer,
       parity
     ])
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const result = await contract.isValidSignature(msgHash, sigData)
     expect(result).to.equal('0xffffffff')
   })
@@ -211,11 +211,12 @@ describe('Multi Sign Tests', function () {
     const { contract } = await deployContract(signerOne, signerTwo)
 
     const msg = 'just a test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const publicKeys = [signerTwo.getPublicKey(), signerOne.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
-    const {signature: sigTwo} = signerTwo.multiSignMessage(msg, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
+    const {signature: sigTwo} = signerTwo.multiSignMessage(msgHash, publicKeys, publicNonces)
     const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
     // the multisig px and parity
@@ -230,7 +231,6 @@ describe('Multi Sign Tests', function () {
       sSummed.buffer,
       parity
     ])
-    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
     const result = await contract.isValidSignature(msgHash, sigData)
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32)
   })

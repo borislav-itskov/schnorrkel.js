@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import Schnorrkel from '../../src/index'
 import { _hashPrivateKey, generateRandomKeys } from '../../src/core'
+import { ethers } from 'ethers'
 
 
 describe('testing sumSigs', () => {
@@ -18,8 +19,9 @@ describe('testing sumSigs', () => {
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
 
     const msg = 'test message'
-    const signatureOne = schnorrkelOne.multiSigSign(keyPairOne.privateKey, msg, publicKeys, publicNonces)
-    const signatureTwo = schnorrkelTwo.multiSigSign(keyPairTwo.privateKey, msg, publicKeys, publicNonces)
+    const msgHash = ethers.utils.solidityKeccak256(['string'],[msg])
+    const signatureOne = schnorrkelOne.multiSigSign(keyPairOne.privateKey, msgHash, publicKeys, publicNonces)
+    const signatureTwo = schnorrkelTwo.multiSigSign(keyPairTwo.privateKey, msgHash, publicKeys, publicNonces)
 
     const signatures = [signatureOne.signature, signatureTwo.signature]
     const signature = Schnorrkel.sumSigs(signatures)
