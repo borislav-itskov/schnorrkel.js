@@ -19,7 +19,7 @@ describe('testing multiSigSign', () => {
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
 
     const msg = 'test message'
-    const signature = schnorrkelOne.multiSigSign(keyPairOne.privateKey, ethers.utils.solidityKeccak256(['string'], [msg]), publicKeys, publicNonces)
+    const signature = schnorrkelOne.multiSigSign(keyPairOne.privateKey, ethers.utils.hashMessage(msg), publicKeys, publicNonces)
 
     expect(signature).toBeDefined()
     expect(signature.finalPublicNonce.buffer).toHaveLength(33)
@@ -33,9 +33,10 @@ describe('testing multiSigSign', () => {
     const publicNonces = schnorrkel.generatePublicNonces(keyPair.privateKey)
 
     const msg = 'test message'
+    const msgHash = ethers.utils.hashMessage(msg)
     const publicKeys = [keyPair.publicKey]
 
-    expect(() => schnorrkel.multiSigSign(keyPair.privateKey, msg, publicKeys, [publicNonces])).toThrowError('At least 2 public keys should be provided')
+    expect(() => schnorrkel.multiSigSign(keyPair.privateKey, msgHash, publicKeys, [publicNonces])).toThrowError('At least 2 public keys should be provided')
   })
 
   it('should requires nonces', () => {
@@ -44,9 +45,10 @@ describe('testing multiSigSign', () => {
     const keyPairTwo = generateRandomKeys()
 
     const msg = 'test message'
+    const msgHash = ethers.utils.hashMessage(msg)
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
 
-    expect(() => schnorrkel.multiSigSign(keyPairOne.privateKey, msg, publicKeys, [])).toThrowError('Nonces should be exchanged before signing')
+    expect(() => schnorrkel.multiSigSign(keyPairOne.privateKey, msgHash, publicKeys, [])).toThrowError('Nonces should be exchanged before signing')
   })
 
   it('should generate multi signature by hash', () => {

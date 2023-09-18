@@ -44,8 +44,6 @@ describe('Multi Sign Tests', function () {
 
     // the multisig px and parity
     const px = ethers.utils.hexlify(combinedPublicKey.buffer.slice(1, 33))
-    const combinedPublicAddress = '0x' + px.slice(px.length - 40, px.length)
-
     const parity = combinedPublicKey.buffer[0] - 2 + 27
 
     // wrap the result
@@ -251,11 +249,11 @@ describe('Multi Sign Tests', function () {
       expect(e.message).to.equal('At least 2 public keys should be provided')
     }
 
-    const msg = 'just a test message'
+    const msgHash = ethers.utils.hashMessage('just a test message')
     const publicKeys = [signerOne.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
     try {
-      signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+      signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
     } catch (e: any) {
       expect(e.message).to.equal('At least 2 public keys should be provided')
     }
