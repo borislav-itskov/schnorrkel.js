@@ -167,7 +167,6 @@ export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer,
   // k + kTwoMulB + xea
   const final = secp256k1.privateKeyTweakAdd(kPlusxea, kTwoMulB)
 
-
   return {
     // s = k + xea mod(n)
     signature: bigi.fromBuffer(final).mod(n).toBuffer(32),
@@ -177,12 +176,13 @@ export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer,
 }
 
 export const _sumSigs = (signatures: Buffer[]): Buffer => {
-  let combined = bigi.fromBuffer(signatures[0])
-  signatures.shift()
-  signatures.forEach(sig => {
-    combined = combined.add(bigi.fromBuffer(sig))
-  })
-  return combined.mod(n).toBuffer(32)
+  let combined = new Uint8Array()
+
+  for (let i = 0; i < signatures.length - 1; i++) {
+    combined = secp256k1.privateKeyTweakAdd(signatures[i], signatures[i+1])
+  }
+
+  return Buffer.from(combined)
 }
 
 export const _verify = (s: Buffer, hash: string, R: Buffer, publicKey: Buffer): boolean  => {

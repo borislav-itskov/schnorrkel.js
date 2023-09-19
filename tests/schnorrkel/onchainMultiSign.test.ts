@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ethers } from 'ethers'
-import Schnorrkel, { Key } from '../../src/index'
+import Schnorrkel from '../../src/index'
 import { compile } from '../../utils/compile.js'
 import { wallet2 } from '../config.js'
 import DefaultSigner from '../../utils/DefaultSigner'
@@ -58,7 +58,7 @@ describe('Multi Sign Tests', function () {
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32)
   })
 
-  it('should generate a schnorr musig2 and validate it on the blockchain', async function () {
+  it('should generate the same sig to be sure caching does not affect validation', async function () {
     // deploy the contract
     const signerOne = new DefaultSigner(0)
     const signerTwo = new DefaultSigner(1)
