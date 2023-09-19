@@ -4,7 +4,6 @@ import Schnorrkel from '../../src/index'
 import { compile } from '../../utils/compile.js'
 import { wallet2 } from '../config.js'
 import DefaultSigner from '../../utils/DefaultSigner'
-import { _generatePk } from '../../src/core'
 const ERC1271_MAGICVALUE_BYTES32 = '0x1626ba7e'
 
 describe('Multi Sign Tests', function () {

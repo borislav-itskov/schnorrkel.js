@@ -2,7 +2,7 @@ import secp256k1 from 'secp256k1'
 
 import { Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign } from './core'
+import { _generateL, _aCoefficient, _generateNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generateSchnorrAddr, _sign } from './core'
 import { InternalNonces, InternalPublicNonces, InternalSignature } from './core/types'
 import { Challenge, FinalPublicNonce, SignatureOutput } from './types/signature'
 
@@ -10,7 +10,7 @@ class Schnorrkel {
   protected nonces: Nonces = {}
 
   private _setNonce(privateKey: Buffer): string {
-    const { publicNonceData, privateNonceData, hash } = _generatePublicNonces(privateKey)
+    const { publicNonceData, privateNonceData, hash } = _generateNonces(privateKey)
 
     const mappedPublicNonce: PublicNonces = {
       kPublic: new Key(Buffer.from(publicNonceData.kPublic)),
@@ -80,11 +80,12 @@ class Schnorrkel {
   }
 
   static getCombinedAddress(publicKeys: Array<Key>): string {
-    if (publicKeys.length < 2) throw Error('At least 2 public keys should be provided')
+    if (publicKeys.length < 2) {
+      throw Error('At least 2 public keys should be provided')
+    }
 
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const px = _generatePk(combinedPublicKey.buffer)
-    return px
+    return _generateSchnorrAddr(combinedPublicKey.buffer)
   }
 
   generatePublicNonces(privateKey: Key): PublicNonces {
