@@ -21,4 +21,10 @@ describe('testing getPublicNonces', () => {
     expect(retrievedPublicNonces.kPublic.buffer).to.equal(publicNonces.kPublic.buffer)
     expect(retrievedPublicNonces.kTwoPublic.buffer).to.equal(publicNonces.kTwoPublic.buffer)
   })
+  it('should throw an error when calling getPublicNonces if they are not set', () => {
+    const schnorrkel = new Schnorrkel()
+
+    const keyPair = generateRandomKeys()
+    expect(() => schnorrkel.getPublicNonces(keyPair.privateKey)).toThrowError('Nonces not set')
+  })
 })

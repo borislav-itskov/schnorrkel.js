@@ -1,11 +1,11 @@
 
 export interface SignatureOutput {
-  finalPublicNonce: FinalPublicNonce, // the final public nonce
+  publicNonce: PublicNonce, // the final public nonce
   challenge: Challenge, // the schnorr challenge
   signature: Signature, // the signature
 }
 
-export class FinalPublicNonce {
+export class PublicNonce {
   readonly buffer: Buffer
 
   constructor(buffer: Buffer) {
@@ -16,8 +16,8 @@ export class FinalPublicNonce {
     return this.buffer.toString('hex')
   }
 
-  static fromHex(hex: string): FinalPublicNonce {
-    return new FinalPublicNonce(Buffer.from(hex, 'hex'))
+  static fromHex(hex: string): PublicNonce {
+    return new PublicNonce(Buffer.from(hex, 'hex'))
   }
 }
 
@@ -32,8 +32,8 @@ export class Challenge {
     return this.buffer.toString('hex')
   }
 
-  static fromHex(hex: string): FinalPublicNonce {
-    return new FinalPublicNonce(Buffer.from(hex, 'hex'))
+  static fromHex(hex: string): Challenge {
+    return new Challenge(Buffer.from(hex, 'hex'))
   }
 }
 
@@ -48,8 +48,8 @@ export class Signature {
     return this.buffer.toString('hex')
   }
 
-  static fromHex(hex: string): FinalPublicNonce {
-    return new FinalPublicNonce(Buffer.from(hex, 'hex'))
+  static fromHex(hex: string): Signature {
+    return new Signature(Buffer.from(hex, 'hex'))
   }
 }
 

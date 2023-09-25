@@ -22,7 +22,7 @@ describe('testing multiSigSign', () => {
     const signature = schnorrkelOne.multiSigSign(keyPairOne.privateKey, ethers.utils.hashMessage(msg), publicKeys, publicNonces)
 
     expect(signature).toBeDefined()
-    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.publicNonce.buffer).toHaveLength(33)
     expect(signature.signature.buffer).toHaveLength(32)
     expect(signature.challenge.buffer).toHaveLength(32)
   })
@@ -68,7 +68,7 @@ describe('testing multiSigSign', () => {
     const signature = schnorrkelOne.multiSigSign(keyPairOne.privateKey, hash, publicKeys, publicNonces)
 
     expect(signature).toBeDefined()
-    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.publicNonce.buffer).toHaveLength(33)
     expect(signature.signature.buffer).toHaveLength(32)
     expect(signature.challenge.buffer).toHaveLength(32)
   })

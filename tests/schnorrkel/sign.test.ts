@@ -13,7 +13,7 @@ describe('testing sign', () => {
     const signature = Schnorrkel.sign(keyPair.privateKey, hash)
 
     expect(signature).toBeDefined()
-    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.publicNonce.buffer).toHaveLength(33)
     expect(signature.signature.buffer).toHaveLength(32)
     expect(signature.challenge.buffer).toHaveLength(32)
   })
@@ -26,7 +26,7 @@ describe('testing sign', () => {
     const signature = Schnorrkel.sign(keyPair.privateKey, hash)
 
     expect(signature).toBeDefined()
-    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.publicNonce.buffer).toHaveLength(33)
     expect(signature.signature.buffer).toHaveLength(32)
     expect(signature.challenge.buffer).toHaveLength(32)
   })

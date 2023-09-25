@@ -11,7 +11,7 @@ export interface InternalPublicNonces {
 }
 
 export interface InternalSignature {
-  finalPublicNonce: Buffer, // the final public nonce
+  publicNonce: Buffer, // the final public nonce
   challenge: Buffer, // the schnorr challenge
   signature: Buffer, // the signature
 }

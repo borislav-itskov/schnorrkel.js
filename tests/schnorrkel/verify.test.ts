@@ -17,16 +17,16 @@ describe('testing verify', () => {
     )
 
     expect(signature).toBeDefined()
-    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.publicNonce.buffer).toHaveLength(33)
     expect(signature.signature.buffer).toHaveLength(32)
     expect(signature.challenge.buffer).toHaveLength(32)
-    const result = Schnorrkel.verify(signature.signature, ethers.utils.solidityKeccak256(['string'], [msg]), signature.finalPublicNonce, new Key(Buffer.from(publicKey)))
+    const result = Schnorrkel.verify(signature.signature, ethers.utils.solidityKeccak256(['string'], [msg]), signature.publicNonce, new Key(Buffer.from(publicKey)))
     expect(result).toEqual(true)
 
     const secondMsg = 'this is another msg'
     const secondMsgHash = ethers.utils.solidityKeccak256(['string'], [secondMsg])
     const secondSig = Schnorrkel.sign(privateKey, secondMsgHash)
-    const secondRes = Schnorrkel.verify(secondSig.signature, ethers.utils.solidityKeccak256(['string'], [secondMsg]), secondSig.finalPublicNonce, new Key(Buffer.from(publicKey)))
+    const secondRes = Schnorrkel.verify(secondSig.signature, ethers.utils.solidityKeccak256(['string'], [secondMsg]), secondSig.publicNonce, new Key(Buffer.from(publicKey)))
     expect(secondRes).toEqual(true)
   })
   it('should sum signatures and verify them', () => {
@@ -50,7 +50,7 @@ describe('testing verify', () => {
 
     const signatures = [signatureOne.signature, signatureTwo.signature]
     const signaturesSummed = Schnorrkel.sumSigs(signatures)
-    const result = Schnorrkel.verify(signaturesSummed, ethers.utils.solidityKeccak256(['string'], [msg]), signatureTwo.finalPublicNonce, combinedPublicKey)
+    const result = Schnorrkel.verify(signaturesSummed, ethers.utils.solidityKeccak256(['string'], [msg]), signatureTwo.publicNonce, combinedPublicKey)
 
     expect(result).toEqual(true)
   })
@@ -83,7 +83,7 @@ describe('testing verify', () => {
     
     const signatures = [signatureOne.signature, signatureTwo.signature]
     const signaturesSummed = Schnorrkel.sumSigs(signatures)
-    const result = Schnorrkel.verify(signaturesSummed, msgHash, signatureTwo.finalPublicNonce, combinedPublicKey)
+    const result = Schnorrkel.verify(signaturesSummed, msgHash, signatureTwo.publicNonce, combinedPublicKey)
 
     expect(result).toEqual(true)
   })
@@ -100,13 +100,13 @@ describe('testing verify', () => {
     )
 
     expect(signature).toBeDefined()
-    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.publicNonce.buffer).toHaveLength(33)
     expect(signature.signature.buffer).toHaveLength(32)
     expect(signature.challenge.buffer).toHaveLength(32)
     const result = Schnorrkel.verify(
       signature.signature,
       msgHash,
-      signature.finalPublicNonce,
+      signature.publicNonce,
       new Key(Buffer.from(publicKey))
     )
     expect(result).toEqual(true)
@@ -133,7 +133,7 @@ describe('testing verify', () => {
 
     const signatures = [signatureOne.signature, signatureTwo.signature]
     const signaturesSummed = Schnorrkel.sumSigs(signatures)
-    const result = Schnorrkel.verify(signaturesSummed, ethers.utils.keccak256(msg), signatureTwo.finalPublicNonce, combinedPublicKey)
+    const result = Schnorrkel.verify(signaturesSummed, ethers.utils.keccak256(msg), signatureTwo.publicNonce, combinedPublicKey)
 
     expect(result).toEqual(true)
   })
@@ -149,10 +149,10 @@ describe('testing verify', () => {
     )
 
     expect(signature).toBeDefined()
-    expect(signature.finalPublicNonce.buffer).toHaveLength(33)
+    expect(signature.publicNonce.buffer).toHaveLength(33)
     expect(signature.signature.buffer).toHaveLength(32)
     expect(signature.challenge.buffer).toHaveLength(32)
-    const result = Schnorrkel.verify(signature.signature, hash, signature.finalPublicNonce, new Key(Buffer.from(publicKey)))
+    const result = Schnorrkel.verify(signature.signature, hash, signature.publicNonce, new Key(Buffer.from(publicKey)))
     expect(result).toEqual(true)
   })
 
@@ -176,7 +176,7 @@ describe('testing verify', () => {
     const signaturesSummed = Schnorrkel.sumSigs(signatures)
 
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const result = Schnorrkel.verify(signaturesSummed, hash, signature.finalPublicNonce, combinedPublicKey)
+    const result = Schnorrkel.verify(signaturesSummed, hash, signature.publicNonce, combinedPublicKey)
     expect(result).toEqual(true)
   })
 })

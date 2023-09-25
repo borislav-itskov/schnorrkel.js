@@ -37,7 +37,7 @@ describe('Multi Sign Tests', function () {
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e, publicNonce} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
     const {signature: sigTwo} = signerTwo.multiSignMessage(msgHash, publicKeys, publicNonces)
     const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
@@ -68,7 +68,7 @@ describe('Multi Sign Tests', function () {
     const publicKeys = [signerOne.getPublicKey(), signerTwo.getPublicKey()]
     const publicNonces = [signerOne.getPublicNonces(), signerTwo.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
+    const {signature: sigOne, challenge: e, publicNonce} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)
     const {signature: sigTwo} = signerTwo.multiSignMessage(msgHash, publicKeys, publicNonces)
     const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 
@@ -102,7 +102,7 @@ describe('Multi Sign Tests', function () {
     const publicNonces = [signerOne.getPublicNonces(), signerThree.getPublicNonces()]
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
 
-//     finalPublicNonce: FinalPublicNonce, // the final public nonce
+//     publicNonce: publicNonce, // the final public nonce
 //   challenge: Challenge, // the schnorr challenge
 //   signature: Signature, // the signature
     const {signature: sigOne, challenge: e} = signerOne.multiSignMessage(msgHash, publicKeys, publicNonces)

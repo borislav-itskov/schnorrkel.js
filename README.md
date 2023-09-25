@@ -10,7 +10,7 @@ Since version 2.0.0, we're moving entirely to Typescript.
 * `sign()` and `multiSigSign()` return an instance of `SignatureOutput`. Each element in it has a buffer property
   * instead of `e` we return `challenge` for the Schnorr Challenge. To accces its value, use `challenge.buffer`
   * instead of `s` we return `signature` for the Schnorr Signature. To accces its value, use `signature.buffer`
-  * instead of `R` we return `finalPublicNonce` for the nonce. To accces its value, use `finalPublicNonce.buffer`
+  * instead of `R` we return `publicNonce` for the nonce. To accces its value, use `publicNonce.buffer`
 * `getCombinedPublicKey()` returns a `Key` class. To get the actual key, use `key.buffer`
 * a lot of method become static as they don't keep any state:
   * `verify`
@@ -20,6 +20,7 @@ Since version 2.0.0, we're moving entirely to Typescript.
   * `getCombinedAddress`
 
 ## Version 3.0 Breaking changes
+* `finalPublicNonce`, `FinalPublicNonce` is replaced everywhere with `publicNonce`, `PublicNonce`. The old name just didn't make sense.
 * `sign()` is the former `signHash()`. A sign function that accepts a plain-text message as an argument no longer exists.
 * `multiSigSign()` is the former `multiSigSignHash()`. A sign function that accepts a plain-text message as an argument no longer exists.
 * `verify()` is the former `verifyHash()`. A verification function that accepts a plain-text message as an argument no longer exists.
@@ -56,15 +57,15 @@ import Schnorrkel from '@borislav.itskov/schnorrkel.js'
 const privateKey = new Key(Buffer.from(ethers.utils.randomBytes(32)))
 const msg = 'test message'
 const hash = ethers.utils.hashMessage(msg)
-const {signature, finalPublicNonce, challenge} = Schnorrkel.sign(privateKey, hash)
+const {signature, publicNonce, challenge} = Schnorrkel.sign(privateKey, hash)
 ```
 
 Offchain verification:
-We take the `signature`, `hash` and `finalPublicNonce` from the example above and do:
+We take the `signature`, `hash` and `publicNonce` from the example above and do:
 ```js
 const publicKey = Buffer.from(secp256k1.publicKeyCreate(privateKey.buffer))
-// signature and finalPublicNonce come from Schnorrkel.sign
-const result = Schnorrkel.verify(signature, hash, finalPublicNonce, publicKey)
+// signature and publicNonce come from Schnorrkel.sign
+const result = Schnorrkel.verify(signature, hash, publicNonce, publicKey)
 ```
 
 Onchain verification:
@@ -156,7 +157,7 @@ const publicKey1: Buffer = '...'
 const publicKey2: Buffer = '...'
 const publicKeys = [publicKey1, publicKey2];
 const combinedPublicKey = schnorrkel.getCombinedPublicKey(publicKeys)
-const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+const {signature: sigOne, challenge: e, publicNonce} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
 const {signature: sigTwo} = signerTwo.multiSignMessage(msg, publicKeys, publicNonces)
 const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 ```
@@ -180,7 +181,7 @@ const result = await contract.isValidSignature(msgHash, sigData);
 #### verify offchain
 
 ```js
-const result = schnorrkel.verify(sSummed, msg, finalPublicNonce, combinedPublicKey);
+const result = schnorrkel.verify(sSummed, msg, publicNonce, combinedPublicKey);
 ```
 
 You can find reference to this in `tests/schnorrkel/onchainMultiSign.test.ts` in this repository.
