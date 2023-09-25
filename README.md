@@ -6,11 +6,11 @@ Blockchain validation via ecrecover is also supported.
 # Typescript support
 Since version 2.0.0, we're moving entirely to Typescript.
 
-## Breaking changes
+## Version 2.0 Breaking changes
 * `sign()` and `multiSigSign()` return an instance of `SignatureOutput`. Each element in it has a buffer property
   * instead of `e` we return `challenge` for the Schnorr Challenge. To accces its value, use `challenge.buffer`
   * instead of `s` we return `signature` for the Schnorr Signature. To accces its value, use `signature.buffer`
-  * instead of `R` we return `finalPublicNonce` for the nonce. To accces its value, use `finalPublicNonce.buffer`
+  * instead of `R` we return `publicNonce` for the nonce. To accces its value, use `publicNonce.buffer`
 * `getCombinedPublicKey()` returns a `Key` class. To get the actual key, use `key.buffer`
 * a lot of method become static as they don't keep any state:
   * `verify`
@@ -18,6 +18,14 @@ Since version 2.0.0, we're moving entirely to Typescript.
   * `sumSigs`
   * `getCombinedPublicKey`
   * `getCombinedAddress`
+
+## Version 3.0 Breaking changes
+* `finalPublicNonce`, `FinalPublicNonce` is replaced everywhere with `publicNonce`, `PublicNonce`. The old name just didn't make sense.
+* `sign()` is the former `signHash()`. A sign function that accepts a plain-text message as an argument no longer exists.
+* `multiSigSign()` is the former `multiSigSignHash()`. A sign function that accepts a plain-text message as an argument no longer exists.
+* `verify()` is the former `verifyHash()`. A verification function that accepts a plain-text message as an argument no longer exists.
+
+In version 2, we had plenty of ways to sign a message. This broad a lot of confusion as to what function was the correct one to use in various situations. This lead us to believe that making things simpler and forcing a hash to be passed to the methods is the way forward.
 
 ## Requirements:
 
@@ -32,7 +40,7 @@ cd schnorrkel.js
 npm i
 ```
 
-### Testing
+## Testing
 ```
 npm run test
 ```
@@ -44,18 +52,20 @@ We refer to Single Signatures as ones that have a single signer.
 
 Sign:
 ```js
-import Schnorrkel from 'schnorrkel'
+import Schnorrkel from '@borislav.itskov/schnorrkel.js'
 
-const privateKey = randomBytes(32) // Buffer
+const privateKey = new Key(Buffer.from(ethers.utils.randomBytes(32)))
 const msg = 'test message'
-const {signature, finalPublicNonce} = Schnorrkel.sign(privateKey, msg)
+const hash = ethers.utils.hashMessage(msg)
+const {signature, publicNonce, challenge} = Schnorrkel.sign(privateKey, hash)
 ```
 
 Offchain verification:
+We take the `signature`, `hash` and `publicNonce` from the example above and do:
 ```js
-const publicKey: Buffer = ... (derived from the privateKey)
-// signature and finalPublicNonce come from s
-const result = Schnorrkel.verify(signature, msg, finalPublicNonce, publicKey)
+const publicKey = Buffer.from(secp256k1.publicKeyCreate(privateKey.buffer))
+// signature and publicNonce come from Schnorrkel.sign
+const result = Schnorrkel.verify(signature, hash, publicNonce, publicKey)
 ```
 
 Onchain verification:
@@ -91,14 +101,18 @@ Afterwards, here is part of the code:
 import { ethers } from 'ethers'
 import secp256k1 from 'secp256k1'
 
-const address = 'input schnorr generated address here'
+const privateKey = new Key(Buffer.from(ethers.utils.randomBytes(32)))
+const publicKey = secp256k1.publicKeyCreate(ethers.utils.arrayify(privateKey))
+const px = publicKey.slice(1, 33)
+const pxGeneratedAddress = ethers.utils.hexlify(px)
+const schnorrAddr = '0x' + pxGeneratedAddress.slice(pxGeneratedAddress.length - 40, pxGeneratedAddress.length)
 const factory = new ethers.ContractFactory(SchnorrAccountAbstraction.abi, SchnorrAccountAbstraction.bytecode, wallet)
-const contract: any = await factory.deploy([address])
+const contract: any = await factory.deploy([schnorrAddr])
 
-const privateKey: Buffer = '...'
 const pkBuffer = new Key(Buffer.from(ethers.utils.arrayify(privateKey)))
 const msg = 'just a test message';
-const sig = schnorrkel.sign(msg, privateKey);
+const msgHash = ethers.utils.hashMessage(msg)
+const sig = Schnorrkel.sign(pkBuffer, msgHash)
 
 // wrap the result
 const publicKey = secp256k1.publicKeyCreate(ethers.utils.arrayify(privateKey))
@@ -111,7 +125,6 @@ const sigData = abiCoder.encode([ "bytes32", "bytes32", "bytes32", "uint8" ], [
     sig.signature.buffer,
     parity
 ]);
-const msgHash = ethers.utils.solidityKeccak256(['string'], [msg]);
 const result = await contract.isValidSignature(msgHash, sigData);
 ```
 
@@ -144,7 +157,7 @@ const publicKey1: Buffer = '...'
 const publicKey2: Buffer = '...'
 const publicKeys = [publicKey1, publicKey2];
 const combinedPublicKey = schnorrkel.getCombinedPublicKey(publicKeys)
-const {signature: sigOne, challenge: e, finalPublicNonce} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
+const {signature: sigOne, challenge: e, publicNonce} = signerOne.multiSignMessage(msg, publicKeys, publicNonces)
 const {signature: sigTwo} = signerTwo.multiSignMessage(msg, publicKeys, publicNonces)
 const sSummed = Schnorrkel.sumSigs([sigOne, sigTwo])
 ```
@@ -168,7 +181,7 @@ const result = await contract.isValidSignature(msgHash, sigData);
 #### verify offchain
 
 ```js
-const result = schnorrkel.verify(sSummed, msg, finalPublicNonce, combinedPublicKey);
+const result = schnorrkel.verify(sSummed, msg, publicNonce, combinedPublicKey);
 ```
 
 You can find reference to this in `tests/schnorrkel/onchainMultiSign.test.ts` in this repository.
