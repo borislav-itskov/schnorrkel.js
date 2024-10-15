@@ -1,20 +1,19 @@
 import { ethers } from 'ethers'
 import secp256k1 from 'secp256k1'
-import ecurve from 'ecurve'
-import elliptic from 'elliptic'
+import ecurve, { Point } from 'ecurve'
 import bigi from 'bigi'
-import { BN } from 'bn.js'
-
 import { InternalNoncePairs, InternalNonces, InternalPublicNonces, InternalSignature } from './types'
 import { KeyPair } from '../types'
 
 const curve = ecurve.getCurveByName('secp256k1')
-const n = curve?.n
-const EC = elliptic.ec
-const ec = new EC('secp256k1')
-const generatorPoint = ec.g
 
-const _generateNonce = (): InternalNoncePairs => {
+/**
+ * Generate two random nonces in preparation for a multisignature.
+ * We return along with them their public representations
+ *
+ * @returns InternalNoncePairs
+ */
+const generateNonce = (): InternalNoncePairs => {
   const k = Buffer.from(ethers.utils.randomBytes(32))
   const kTwo = Buffer.from(ethers.utils.randomBytes(32))
   const kPublic = Buffer.from(secp256k1.publicKeyCreate(k))
@@ -28,7 +27,18 @@ const _generateNonce = (): InternalNoncePairs => {
   }
 }
 
-const _bCoefficient = (combinedPublicKey: Buffer, msgHash: string, publicNonces: InternalPublicNonces[]): Buffer => {
+/**
+ * Compute the b coefficient needed for multisignature signing.
+ * The b coefficient is needed to prevent the DL query attack
+ * on the public nonces, in hand allowing us to skip the nonce
+ * commitment round
+ *
+ * @param combinedPublicKey - the sum of the keys of the participants
+ * @param msgHash - the hash that's going to be signed
+ * @param publicNonces - the exchanged public nonces
+ * @returns Buffer
+ */
+const bCoefficient = (combinedPublicKey: Buffer, msgHash: string, publicNonces: InternalPublicNonces[]): Buffer => {
   type KeyOf = keyof InternalPublicNonces
   const arrayColumn = (arr: Array<InternalPublicNonces>, n: KeyOf) => arr.map(x => x[n])
   const kPublicNonces = secp256k1.publicKeyCombine(arrayColumn(publicNonces, 'kPublic'))
@@ -43,19 +53,28 @@ const _bCoefficient = (combinedPublicKey: Buffer, msgHash: string, publicNonces:
 const areBuffersSame = (buf1: Buffer, buf2: Buffer): boolean => {
   if (buf1.byteLength != buf2.byteLength) return false
 
-  var dv1 = Buffer.from(buf1)
-  var dv2 = Buffer.from(buf2)
-  for (var i = 0; i != buf1.byteLength; i++) {
+  const dv1 = Buffer.from(buf1)
+  const dv2 = Buffer.from(buf2)
+  for (let i = 0; i != buf1.byteLength; i++) {
     if (dv1[i] != dv2[i]) return false
   }
 
   return true
 }
 
+/**
+ * Compute the schnorr challenge.
+ * The formula is: s = k + e*d. We're computing `e` here
+ *
+ * @param R
+ * @param msgHash
+ * @param publicKey
+ * @returns Buffer hash(concat(public_nonce_addr, parity, x_coord, message))
+ */
 const challenge = (R: Buffer, msgHash: string, publicKey: Buffer): Buffer => {
   // convert R to address
-  var R_uncomp = secp256k1.publicKeyConvert(R, false)
-  var R_addr = ethers.utils.arrayify(ethers.utils.keccak256(R_uncomp.slice(1, 65))).slice(12, 32)
+  const R_uncomp = secp256k1.publicKeyConvert(R, false)
+  const R_addr = ethers.utils.arrayify(ethers.utils.keccak256(R_uncomp.slice(1, 65))).slice(12, 32)
 
   // e = keccak256(address(R) || compressed publicKey || msgHash)
   return Buffer.from(ethers.utils.arrayify(
@@ -67,38 +86,100 @@ const challenge = (R: Buffer, msgHash: string, publicKey: Buffer): Buffer => {
 }
 
 /**
- * Sign the given hash by the private key
+ * A helper function that creates a key pair
  *
- * @param Buffer privateKey
- * @param string hash
- * @returns InternalSignature
+ * @returns KeyPair
  */
-const internalSign = (privateKey: Buffer, hash: string): InternalSignature => {
-  const localPk = Buffer.from(privateKey)
-  const publicKey = Buffer.from(secp256k1.publicKeyCreate(localPk))
+export const generateRandomKeys = (): KeyPair => {
+  let privKeyBytes: Buffer
+  do {
+    privKeyBytes = Buffer.from(ethers.utils.randomBytes(32))
+  } while (!secp256k1.privateKeyVerify(privKeyBytes))
 
-  // R = G * k
-  var k = ethers.utils.randomBytes(32)
-  var R = Buffer.from(secp256k1.publicKeyCreate(k))
+  const pubKey = Buffer.from(secp256k1.publicKeyCreate(privKeyBytes))
 
-  // e = h(address(R) || compressed pubkey || m)
-  var e = challenge(R, hash, publicKey)
+  const data = {
+    publicKey: pubKey,
+    privateKey: privKeyBytes,
+  }
 
-  // xe = x * e
-  var xe = secp256k1.privateKeyTweakMul(localPk, e)
+  return new KeyPair(data)
+}
 
-  // s = k + xe mod(n)
-  var s = Buffer.from(secp256k1.privateKeyTweakAdd(k, xe))
-  s = bigi.fromBuffer(s).mod(n).toBuffer(32)
+/**
+ * Generate a hash of all the public keys that are participating
+ * in the signing process. We need this to craft the `a` coefficient,
+ * which helps us prevent key cancelation attacks.
+ *
+ * @param publicKeys
+ * @returns string
+ */
+export const _generateL = (publicKeys: Array<Buffer>): string => {
+  return ethers.utils.keccak256(_concatTypedArrays(publicKeys.sort(Buffer.compare)))
+}
+
+export const _concatTypedArrays = (publicKeys: Buffer[]): Buffer => {
+  const c: Buffer = Buffer.alloc(publicKeys.reduce((partialSum, publicKey) => partialSum + publicKey.length, 0))
+  publicKeys.map((publicKey, index) => c.set(publicKey, (index * publicKey.length)))
+  return Buffer.from(c.buffer)
+}
+
+/**
+ * Generate `a` coefficient to prevent key cancelation attacks.
+ * Hash commitment to all the public keys to prevent your key
+ * not participating in the multisignature.
+ *
+ * @param publicKey - the signer's public key
+ * @param L - review _generateL
+ * @returns Buffer hash(concat(L, own_public_key))
+ */
+export const _aCoefficient = (publicKey: Buffer, L: string): Buffer => {
+  return Buffer.from(ethers.utils.arrayify(ethers.utils.solidityKeccak256(
+    ['bytes', 'bytes'],
+    [L, publicKey]
+  )))
+}
+
+/**
+ * Hash the privateKey so it is not in plain text in arrays.
+ * A separate method for easy reuse
+ *
+ * @param privateKey
+ * @returns string
+ */
+export const _hashPrivateKey = (privateKey: Buffer): string => {
+  return ethers.utils.keccak256(privateKey)
+}
+
+/**
+ * Generate the nonces for the next signature.
+ * Use the hash of the private key for a unique identifier
+ *
+ * @param privateKey
+ * @returns
+ */
+export const _generateNonces = (privateKey: Buffer): {
+  privateNonceData: Pick<InternalNoncePairs, 'k' | 'kTwo'>,
+  publicNonceData: InternalPublicNonces,
+  hash: string,
+} => {
+  const hash = _hashPrivateKey(privateKey)
+  const nonce = generateNonce()
 
   return {
-    finalPublicNonce: R,
-    challenge: e,
-    signature: s
+    hash,
+    privateNonceData: {
+      k: nonce.k,
+      kTwo: nonce.kTwo,
+    },
+    publicNonceData: {
+      kPublic: nonce.kPublic,
+      kTwoPublic: nonce.kTwoPublic,
+    }
   }
 }
 
-const internalMultiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer, privateKey: Buffer, hash: string, publicKeys: Buffer[], publicNonces: InternalPublicNonces[]): InternalSignature => {
+export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer, privateKey: Buffer, hash: string, publicKeys: Buffer[], publicNonces: InternalPublicNonces[]): InternalSignature => {
   if (publicKeys.length < 2) {
     throw Error('At least 2 public keys should be provided')
   }
@@ -112,7 +193,7 @@ const internalMultiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer,
   const publicKey = Buffer.from(secp256k1.publicKeyCreate(localPk))
   const L = _generateL(publicKeys)
   const a = _aCoefficient(publicKey, L)
-  const b = _bCoefficient(combinedPublicKey, hash, publicNonces)
+  const b = bCoefficient(combinedPublicKey, hash, publicNonces)
 
   const effectiveNonces = publicNonces.map((batch) => {
     return Buffer.from(secp256k1.publicKeyCombine([batch.kPublic, secp256k1.publicKeyTweakMul(batch.kTwoPublic, b)]))
@@ -143,141 +224,110 @@ const internalMultiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer,
   // kTwo * b
   const kTwoMulB = secp256k1.privateKeyTweakMul(kTwo, b)
 
-  // k + kTwoMulB + xea
-  const final = secp256k1.privateKeyTweakAdd(kPlusxea, kTwoMulB)
-
+  // k + kTwoMulB + xea mod(n)
+  const final = Buffer.from(secp256k1.privateKeyTweakAdd(kPlusxea, kTwoMulB))
 
   return {
-    // s = k + xea mod(n)
-    signature: bigi.fromBuffer(final).mod(n).toBuffer(32),
+    signature: final,
     challenge: e,
-    finalPublicNonce: R
+    publicNonce: R
   }
 }
 
 /**
- * Verify a signature for the given hash, public nonce and public key
+ * Sum the passed signatures.
+ * mod(n) is automatically applied in the privateKeyTweakAdd function
  *
- * @param Buffer s
- * @param string hash
- * @param Buffer R
- * @param Buffer publicKey
- * @returns boolean
+ * @param signatures
+ * @returns Buffer summed signature
  */
-const internalVerify = (s: Buffer, hash: string, R: Buffer, publicKey: Buffer): boolean => {
-  const eC = challenge(R, hash, publicKey)
-  const sG = generatorPoint.mul(ethers.utils.arrayify(s))
-  const P = ec.keyFromPublic(publicKey).getPublic()
-  const bnEC = new BN(Buffer.from(eC).toString('hex'), 'hex')
-  const Pe = P.mul(bnEC)
-  const toPublicR = ec.keyFromPublic(R).getPublic()
-  const RplusPe = toPublicR.add(Pe)
-  return sG.eq(RplusPe)
-}
-
-export const _generateL = (publicKeys: Array<Buffer>) => {
-  return ethers.utils.keccak256(_concatTypedArrays(publicKeys.sort(Buffer.compare)))
-}
-
-export const _concatTypedArrays = (publicKeys: Buffer[]): Buffer => {
-  const c: Buffer = Buffer.alloc(publicKeys.reduce((partialSum, publicKey) => partialSum + publicKey.length, 0))
-  publicKeys.map((publicKey, index) => c.set(publicKey, (index * publicKey.length)))
-  return Buffer.from(c.buffer)
-}
-
-
-export const _aCoefficient = (publicKey: Buffer, L: string): Buffer => {
-  return Buffer.from(ethers.utils.arrayify(ethers.utils.solidityKeccak256(
-    ['bytes', 'bytes'],
-    [L, publicKey]
-  )))
-}
-
-export const generateRandomKeys = () => {
-  let privKeyBytes: Buffer
-  do {
-    privKeyBytes = Buffer.from(ethers.utils.randomBytes(32))
-  } while (!secp256k1.privateKeyVerify(privKeyBytes))
-
-  const pubKey = Buffer.from(secp256k1.publicKeyCreate(privKeyBytes))
-
-  const data = {
-    publicKey: pubKey,
-    privateKey: privKeyBytes,
-  }
-
-  return new KeyPair(data)
-}
-
-export const _hashPrivateKey = (privateKey: Buffer): string => {
-  return ethers.utils.keccak256(privateKey)
-}
-
-export const _generatePublicNonces = (privateKey: Buffer): {
-  privateNonceData: Pick<InternalNoncePairs, 'k' | 'kTwo'>,
-  publicNonceData: InternalPublicNonces,
-  hash: string,
-} => {
-  const hash = _hashPrivateKey(privateKey)
-  const nonce = _generateNonce()
-
-  return {
-    hash,
-    privateNonceData: {
-      k: nonce.k,
-      kTwo: nonce.kTwo,
-    },
-    publicNonceData: {
-      kPublic: nonce.kPublic,
-      kTwoPublic: nonce.kTwoPublic,
-    }
-  }
-}
-
-export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer, privateKey: Buffer, msg: string, publicKeys: Buffer[], publicNonces: InternalPublicNonces[], hashFn: Function|null = null): InternalSignature => {
-  const hashMsg = hashFn ? hashFn : _hashMessage
-  const hash = hashMsg(msg)
-  return internalMultiSigSign(nonces, combinedPublicKey, privateKey, hash, publicKeys, publicNonces)
-}
-
-export const _multiSigSignHash = (nonces: InternalNonces, combinedPublicKey: Buffer, privateKey: Buffer, hash: string, publicKeys: Buffer[], publicNonces: InternalPublicNonces[]): InternalSignature => {
-  return internalMultiSigSign(nonces, combinedPublicKey, privateKey, hash, publicKeys, publicNonces)
-}
-
 export const _sumSigs = (signatures: Buffer[]): Buffer => {
-  let combined = bigi.fromBuffer(signatures[0])
-  signatures.shift()
-  signatures.forEach(sig => {
-    combined = combined.add(bigi.fromBuffer(sig))
-  })
-  return combined.mod(n).toBuffer(32)
+  let combined = new Uint8Array()
+
+  for (let i = 0; i < signatures.length - 1; i++) {
+    combined = secp256k1.privateKeyTweakAdd(signatures[i], signatures[i+1])
+  }
+
+  return Buffer.from(combined)
 }
 
-export const _hashMessage = (message: string): string => {
-  return ethers.utils.solidityKeccak256(['string'], [message])
+/**
+ * The verification formula is: s*G = R + H(m)*X
+ * s is the signature
+ * G is the generation point of the elliptic curve
+ * R is the public nonce, or the ephemeral public nonce
+ * H(m) is the hash of the message
+ * X is the public key
+ *
+ * @param s the signature
+ * @param hash the signed hash
+ * @param R the public nonce used for this signature
+ * @param publicKey the public key used for this signature
+ * @returns bool
+ */
+export const _verify = (s: Buffer, hash: string, R: Buffer, publicKey: Buffer): boolean  => {
+  const eC = challenge(R, hash, publicKey)
+
+  const sG = curve.G.multiply(bigi.fromBuffer(s))
+  const PasPoint = Point.decodeFrom(curve, publicKey)
+  const Pe = PasPoint.multiply(bigi.fromBuffer(eC))
+  const RasPoint = Point.decodeFrom(curve, R)
+  const RplusPetest = RasPoint.add(Pe)
+  return sG.equals(RplusPetest)
 }
 
-export const _verify = (s: Buffer, msg: string, R: Buffer, publicKey: Buffer, hashFn: Function|null = null): boolean => {
-  const hashMsg = hashFn ? hashFn : _hashMessage
-  const hash = hashMsg(msg)
-  return internalVerify(s, hash, R, publicKey)
-}
+/**
+ * Take the x-coordinate of the public key and transform it
+ * into ethereum-like address.
+ * This is the address returned by ecrecover on-chain schnorr verification
+ *
+ * @param combinedPublicKey
+ * @returns address
+ */
+export const _generateSchnorrAddr = (combinedPublicKey: Buffer): string => {
+  if (combinedPublicKey.length != 33) {
+    throw Error('Public key should be 33 length, 1 byte parity and 32 bytes x-coordinate')
+  }
 
-export const _verifyHash = (s: Buffer, hash: string, R: Buffer, publicKey: Buffer): boolean  => {
-  return internalVerify(s, hash, R, publicKey)
-}
-
-export const _generatePk = (combinedPublicKey: Buffer): string => {
   const px = ethers.utils.hexlify(combinedPublicKey.subarray(1,33))
   return '0x' + px.slice(px.length - 40, px.length)
 }
 
-export const _sign = (privateKey: Buffer, msg: string, hashFn: Function|null = null): InternalSignature  => {
-  const hashMsg = hashFn ? hashFn : _hashMessage
-  const hash = hashMsg(msg)
-  return internalSign(privateKey, hash)
+export const _sign = (privateKey: Buffer, hash: string): InternalSignature  => {
+  // if we use secp256k1 directly on the private key for operations
+  // different than publicKeyCreate (privateKeyTweakMul, for example),
+  // the private key gets modified. We do not want that and hence
+  // do operations with a local copy
+  const localPk = Buffer.from(privateKey)
+  const publicKey = Buffer.from(secp256k1.publicKeyCreate(localPk))
+
+  // R = G * k
+  const k = ethers.utils.randomBytes(32)
+  const R = Buffer.from(secp256k1.publicKeyCreate(k))
+
+  // e = h(address(R) || compressed pubkey || m)
+  const e = challenge(R, hash, publicKey)
+
+  // xe = x * e
+  const xe = secp256k1.privateKeyTweakMul(localPk, e)
+
+  // s = k + xe mod(n)
+  const s = Buffer.from(secp256k1.privateKeyTweakAdd(k, xe))
+
+  return {
+    publicNonce: R,
+    challenge: e,
+    signature: s
+  }
 }
 
-export const _signHash = (privateKey: Buffer, hash: string): InternalSignature  => {
-  return internalSign(privateKey, hash)
+/**
+ * Provide a default hash function
+ * It is not mandotory to use this one.
+ *
+ * @param message
+ * @returns string
+ */
+export const _hashMessage = (message: string): string => {
+  return ethers.utils.solidityKeccak256(['string'], [message])
 }

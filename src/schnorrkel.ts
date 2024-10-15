@@ -2,15 +2,24 @@ import secp256k1 from 'secp256k1'
 
 import { Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
-import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign, _signHash, _verifyHash, _multiSigSignHash } from './core'
+import { _generateL, _aCoefficient, _generateNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generateSchnorrAddr, _sign } from './core'
 import { InternalNonces, InternalPublicNonces, InternalSignature } from './core/types'
-import { Challenge, FinalPublicNonce, SignatureOutput } from './types/signature'
+import { Challenge, PublicNonce, SignatureOutput } from './types/signature'
 
 class Schnorrkel {
   protected nonces: Nonces = {}
 
-  private _setNonce(privateKey: Buffer): string {
-    const { publicNonceData, privateNonceData, hash } = _generatePublicNonces(privateKey)
+  /**
+   * Set the nonces for the next multisignature.
+   * Nonces should not be manipulated outside the library. Also,
+   * they should be completely random.
+   *
+   * @param privateKey - we use the private key to create
+   * an unique identifier hash. See _generateNonces
+   * @returns string identifier
+   */
+  private setNonce(privateKey: Buffer): string {
+    const { publicNonceData, privateNonceData, hash } = _generateNonces(privateKey)
 
     const mappedPublicNonce: PublicNonces = {
       kPublic: new Key(Buffer.from(publicNonceData.kPublic)),
@@ -26,9 +35,25 @@ class Schnorrkel {
     return hash
   }
 
+  /**
+   * Clear the nonces used in the last signature
+   * This is a very important step as otherwise, we go into nonce
+   * reuse scenario
+   *
+   * @param privateKey
+   */
   private clearNonces(privateKey: Key): void {
     const x = privateKey.buffer
     const hash = _hashPrivateKey(x)
+
+    // this shouldn't happen, just extra safety
+    // clearNonces should be called after a signature has been crafted.
+    // If the hash is not found in the nonces by any chance after
+    // a signature, then the process should be stopped as we don't
+    // know nonces have been used for the signature
+    if (! this.nonces[hash]) {
+      throw new Error('Multisignature nonces not found')
+    }
 
     delete this.nonces[hash]
   }
@@ -56,14 +81,13 @@ class Schnorrkel {
     }))
   }
 
-  private getMultisigOutput(multiSig: InternalSignature): SignatureOutput {
-    return {
-      signature: new Signature(Buffer.from(multiSig.signature)),
-      finalPublicNonce: new FinalPublicNonce(Buffer.from(multiSig.finalPublicNonce)),
-      challenge: new Challenge(Buffer.from(multiSig.challenge)),
-    }
-  }
-
+  /**
+   * Sum the public keys in a safe manner with a specific
+   * _aCoefficient for each publicKey
+   *
+   * @param publicKeys - the signers
+   * @returns Key summed public key
+   */
   static getCombinedPublicKey(publicKeys: Array<Key>): Key {
     if (publicKeys.length < 2) {
       throw Error('At least 2 public keys should be provided')
@@ -79,16 +103,50 @@ class Schnorrkel {
     return new Key(Buffer.from(secp256k1.publicKeyCombine(modifiedKeys)))
   }
 
+  /**
+   * The address returned by ecrecover on-chain schnorr verification
+   * for the given public keys
+   * @param publicKeys
+   * @returns string address
+   */
   static getCombinedAddress(publicKeys: Array<Key>): string {
-    if (publicKeys.length < 2) throw Error('At least 2 public keys should be provided')
+    if (publicKeys.length < 2) {
+      throw Error('At least 2 public keys should be provided')
+    }
 
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const px = _generatePk(combinedPublicKey.buffer)
-    return px
+    return _generateSchnorrAddr(combinedPublicKey.buffer)
   }
 
+  /**
+   * Generate nonces for the next signature if there aren't any.
+   * If there are, just return them.
+   * This is a method you should use if you don't want to manage
+   * the nonces yourself
+   *
+   * @param privateKey
+   * @returns PublicNonces
+   */
+  generateOrGetPublicNonces(privateKey: Key): PublicNonces {
+    if (this.hasNonces(privateKey)) {
+      return this.getPublicNonces(privateKey)
+    }
+
+    return this.generatePublicNonces(privateKey)
+  }
+
+  /**
+   * Genetate the nonces and return the public ones for a multisignature.
+   * This method always generates new nonces. If you want to keep
+   * you state, you should check with hasNonces() whether they are set.
+   * You need to maintain the state for the nonce exchanging phase and
+   * the signing phase
+   *
+   * @param privateKey
+   * @returns PublicNonces
+   */
   generatePublicNonces(privateKey: Key): PublicNonces {
-    const hash = this._setNonce(privateKey.buffer)
+    const hash = this.setNonce(privateKey.buffer)
     const nonce = this.nonces[hash]
 
     return {
@@ -97,92 +155,112 @@ class Schnorrkel {
     }
   }
 
+  /**
+   * Get the public nonces.
+   * If none are set, an error is returned
+   *
+   * @param privateKey
+   * @returns PublicNonces
+   */
   getPublicNonces(privateKey: Key): PublicNonces {
     const hash = _hashPrivateKey(privateKey.buffer)
     const nonce = this.nonces[hash]
 
+    if (!nonce) {
+      throw new Error('Nonces not set')
+    }
+
     return {
       kPublic: nonce.kPublic,
       kTwoPublic: nonce.kTwoPublic,
     }
   }
 
+  /**
+   * Check if there are nonces generated in the state
+   *
+   * @param privateKey
+   * @returns Key
+   */
   hasNonces(privateKey: Key): boolean {
     const hash = _hashPrivateKey(privateKey.buffer)
     return hash in this.nonces
   }
 
-  multiSigSign(privateKey: Key, msg: string, publicKeys: Key[], publicNonces: PublicNonces[], hashFn: Function|null = null): SignatureOutput {
+  /**
+   * Compute a multisignature.
+   * The nonce exchange phase should have passed before this stage
+   *
+   * @param privateKey - the key you're signing with
+   * @param hash - the message of the multisignature
+   * @param publicKeys - the participants
+   * @param publicNonces - the public nonces of the participants
+   * @returns SignatureOutput
+   */
+  multiSigSign(privateKey: Key, hash: string, publicKeys: Key[], publicNonces: PublicNonces[]): SignatureOutput {
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
     const mappedPublicNonce = this.getMappedPublicNonces(publicNonces)
     const mappedNonces = this.getMappedNonces()
 
-    const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, msg, publicKeys.map(key => key.buffer), mappedPublicNonce, hashFn)
+    const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, hash, publicKeys.map(key => key.buffer), mappedPublicNonce)
 
-    // absolutely crucial to delete the nonces once a signature has been crafted with them.
+    // absolutely crucial to delete the nonces once a signature has been crafted.
     // nonce reuse will lead to private key leakage!
     this.clearNonces(privateKey)
 
-    return this.getMultisigOutput(musigData)
+    return {
+      signature: new Signature(Buffer.from(musigData.signature)),
+      publicNonce: new PublicNonce(Buffer.from(musigData.publicNonce)),
+      challenge: new Challenge(Buffer.from(musigData.challenge)),
+    }
   }
 
-  multiSigSignHash(privateKey: Key, hash: string, publicKeys: Key[], publicNonces: PublicNonces[]): SignatureOutput {
-    const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys)
-    const mappedPublicNonce = this.getMappedPublicNonces(publicNonces)
-    const mappedNonces = this.getMappedNonces()
-
-    const musigData = _multiSigSignHash(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, hash, publicKeys.map(key => key.buffer), mappedPublicNonce)
-
-    // absolutely crucial to delete the nonces once a signature has been crafted with them.
-    // nonce reuse will lead to private key leakage!
-    this.clearNonces(privateKey)
-
-    return this.getMultisigOutput(musigData)
-  }
-
-  static sign(privateKey: Key, msg: string, hashFn: Function|null = null): SignatureOutput {
-    const output = _sign(privateKey.buffer, msg, hashFn)
+  /**
+   * Compute a single schnorr signature
+   *
+   * @param privateKey - the key you're signing with
+   * @param hash - the message you're signing
+   * @returns SignatureOutput
+   */
+  static sign(privateKey: Key, hash: string): SignatureOutput {
+    const output = _sign(privateKey.buffer, hash)
 
     return {
       signature: new Signature(Buffer.from(output.signature)),
-      finalPublicNonce: new FinalPublicNonce(Buffer.from(output.finalPublicNonce)),
+      publicNonce: new PublicNonce(Buffer.from(output.publicNonce)),
       challenge: new Challenge(Buffer.from(output.challenge)),
     }
   }
 
-  static signHash(privateKey: Key, hash: string): SignatureOutput {
-    const output = _signHash(privateKey.buffer, hash)
-
-    return {
-      signature: new Signature(Buffer.from(output.signature)),
-      finalPublicNonce: new FinalPublicNonce(Buffer.from(output.finalPublicNonce)),
-      challenge: new Challenge(Buffer.from(output.challenge)),
-    }
-  }
-
+  /**
+   * Sum two signatures.
+   * Needed for a multisignature verification
+   *
+   * @param signatures
+   * @returns Signature
+   */
   static sumSigs(signatures: Signature[]): Signature {
     const mappedSignatures = signatures.map(signature => signature.buffer)
     const sum = _sumSigs(mappedSignatures)
     return new Signature(Buffer.from(sum))
   }
 
+  /**
+   * Off-chain signature verification
+   *
+   * @param signature - what we're verifying
+   * @param hash - the message that should have been signed
+   * @param publicNonce - the public version of the nonce used for the signature
+   * @param publicKey - the public key of the private key used for the signature
+   * @returns 
+   */
   static verify(
     signature: Signature,
-    msg: string,
-    finalPublicNonce: FinalPublicNonce,
-    publicKey: Key,
-    hashFn: Function|null = null
-  ): boolean {
-    return _verify(signature.buffer, msg, finalPublicNonce.buffer, publicKey.buffer, hashFn)
-  }
-
-  static verifyHash(
-    signature: Signature,
     hash: string,
-    finalPublicNonce: FinalPublicNonce,
+    publicNonce: PublicNonce,
     publicKey: Key
   ): boolean {
-    return _verifyHash(signature.buffer, hash, finalPublicNonce.buffer, publicKey.buffer)
+    return _verify(signature.buffer, hash, publicNonce.buffer, publicKey.buffer)
   }
 }
 
