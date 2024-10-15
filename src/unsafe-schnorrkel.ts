@@ -1,6 +1,6 @@
 import { Key } from './types'
 
-import { _generateL, _aCoefficient, _generatePublicNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generatePk, _sign } from './core'
+import { _generateL, _aCoefficient, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _sign } from './core'
 import Schnorrkel from './schnorrkel'
 
 class UnsafeSchnorrkel extends Schnorrkel {
