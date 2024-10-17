@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import secp256k1 from 'secp256k1'
 import { ethers } from 'ethers'
 import Schnorrkel, { Key } from '../../src/index'
+import SchnorrSigner from '../../src/schnorrSigner.js'
 import { compile } from '../../utils/compile.js'
 import { pk1, wallet } from '../config.js'
 
@@ -32,21 +33,9 @@ describe('Single Sign Tests', function () {
     // sign
     const msg = 'just a test message'
     const msgHash = ethers.utils.hashMessage(msg)
-    const privateKey = new Key(Buffer.from(ethers.utils.arrayify(pk1)))
-    const sig = Schnorrkel.sign(privateKey, msgHash)
-
-    // wrap the result
-    const publicKey = secp256k1.publicKeyCreate(ethers.utils.arrayify(pk1))
-    const px = publicKey.slice(1, 33)
-    const parity = publicKey[0] - 2 + 27
-    const abiCoder = new ethers.utils.AbiCoder()
-    const sigData = abiCoder.encode([ 'bytes32', 'bytes32', 'bytes32', 'uint8' ], [
-      px,
-      sig.challenge.buffer,
-      sig.signature.buffer,
-      parity
-    ])
-    const result = await contract.isValidSignature(msgHash, sigData)
+    const signer = new SchnorrSigner(pk1)
+    const sig = signer.sign(msgHash)
+    const result = await contract.isValidSignature(msgHash, signer.getEcrecoverStructure(sig))
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32)
   })
 })
