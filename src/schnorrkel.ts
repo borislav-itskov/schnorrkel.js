@@ -3,23 +3,21 @@ import secp256k1 from 'secp256k1'
 import { Key, Nonces, PublicNonces, Signature, NoncePairs } from './types'
 
 import { _generateL, _aCoefficient, _generateNonces, _multiSigSign, _hashPrivateKey, _sumSigs, _verify, _generateSchnorrAddr, _sign } from './core'
-import { InternalNonces, InternalPublicNonces, InternalSignature } from './core/types'
+import { InternalNonces, InternalPublicNonces } from './core/types'
 import { Challenge, PublicNonce, SignatureOutput } from './types/signature'
+import { hexlify, randomBytes } from 'ethers/lib/utils'
 
 class Schnorrkel {
   protected nonces: Nonces = {}
+  private readonly nonceId: string = hexlify(randomBytes(32))
 
   /**
    * Set the nonces for the next multisignature.
    * Nonces should not be manipulated outside the library. Also,
    * they should be completely random.
-   *
-   * @param privateKey - we use the private key to create
-   * an unique identifier hash. See _generateNonces
-   * @returns string identifier
    */
-  private setNonce(privateKey: Buffer): string {
-    const { publicNonceData, privateNonceData, hash } = _generateNonces(privateKey)
+  private setNonce(): void {
+    const { publicNonceData, privateNonceData } = _generateNonces()
 
     const mappedPublicNonce: PublicNonces = {
       kPublic: new Key(Buffer.from(publicNonceData.kPublic)),
@@ -31,31 +29,25 @@ class Schnorrkel {
       kTwo: new Key(Buffer.from(privateNonceData.kTwo))
     }
 
-    this.nonces[hash] = { ...mappedPrivateNonce, ...mappedPublicNonce }
-    return hash
+    this.nonces[this.nonceId] = { ...mappedPrivateNonce, ...mappedPublicNonce }
   }
 
   /**
    * Clear the nonces used in the last signature
    * This is a very important step as otherwise, we go into nonce
    * reuse scenario
-   *
-   * @param privateKey
    */
-  private clearNonces(privateKey: Key): void {
-    const x = privateKey.buffer
-    const hash = _hashPrivateKey(x)
-
+  private clearNonces(): void {
     // this shouldn't happen, just extra safety
     // clearNonces should be called after a signature has been crafted.
     // If the hash is not found in the nonces by any chance after
     // a signature, then the process should be stopped as we don't
     // know nonces have been used for the signature
-    if (! this.nonces[hash]) {
+    if (! this.nonces[this.nonceId]) {
       throw new Error('Multisignature nonces not found')
     }
 
-    delete this.nonces[hash]
+    delete this.nonces[this.nonceId]
   }
 
   private getMappedPublicNonces(publicNonces: PublicNonces[]): InternalPublicNonces[] {
@@ -68,17 +60,18 @@ class Schnorrkel {
   }
 
   private getMappedNonces(): InternalNonces {
-    return Object.fromEntries(Object.entries(this.nonces).map(([hash, nonce]) => {
-      return [
-        hash,
-        {
-          k: nonce.k.buffer,
-          kTwo: nonce.kTwo.buffer,
-          kPublic: nonce.kPublic.buffer,
-          kTwoPublic: nonce.kTwoPublic.buffer,
-        }
-      ]
-    }))
+    if (!this.nonces[this.nonceId]) {
+      return {}
+    }
+
+    return {
+      [this.nonceId]: {
+        k: this.nonces[this.nonceId].k.buffer,
+        kTwo: this.nonces[this.nonceId].kTwo.buffer,
+        kPublic: this.nonces[this.nonceId].kPublic.buffer,
+        kTwoPublic: this.nonces[this.nonceId].kTwoPublic.buffer,
+      }
+    }
   }
 
   /**
@@ -124,15 +117,14 @@ class Schnorrkel {
    * This is a method you should use if you don't want to manage
    * the nonces yourself
    *
-   * @param privateKey
    * @returns PublicNonces
    */
-  generateOrGetPublicNonces(privateKey: Key): PublicNonces {
-    if (this.hasNonces(privateKey)) {
-      return this.getPublicNonces(privateKey)
+  generateOrGetPublicNonces(): PublicNonces {
+    if (this.hasNonces()) {
+      return this.getPublicNonces()
     }
 
-    return this.generatePublicNonces(privateKey)
+    return this.generatePublicNonces()
   }
 
   /**
@@ -142,12 +134,11 @@ class Schnorrkel {
    * You need to maintain the state for the nonce exchanging phase and
    * the signing phase
    *
-   * @param privateKey
    * @returns PublicNonces
    */
-  generatePublicNonces(privateKey: Key): PublicNonces {
-    const hash = this.setNonce(privateKey.buffer)
-    const nonce = this.nonces[hash]
+  generatePublicNonces(): PublicNonces {
+    this.setNonce()
+    const nonce = this.nonces[this.nonceId]
 
     return {
       kPublic: nonce.kPublic,
@@ -158,13 +149,11 @@ class Schnorrkel {
   /**
    * Get the public nonces.
    * If none are set, an error is returned
-   *
-   * @param privateKey
+   *   
    * @returns PublicNonces
    */
-  getPublicNonces(privateKey: Key): PublicNonces {
-    const hash = _hashPrivateKey(privateKey.buffer)
-    const nonce = this.nonces[hash]
+  getPublicNonces(): PublicNonces {
+    const nonce = this.nonces[this.nonceId]
 
     if (!nonce) {
       throw new Error('Nonces not set')
@@ -176,15 +165,8 @@ class Schnorrkel {
     }
   }
 
-  /**
-   * Check if there are nonces generated in the state
-   *
-   * @param privateKey
-   * @returns Key
-   */
-  hasNonces(privateKey: Key): boolean {
-    const hash = _hashPrivateKey(privateKey.buffer)
-    return hash in this.nonces
+  hasNonces(): boolean {
+    return this.nonceId in this.nonces
   }
 
   /**
@@ -202,11 +184,11 @@ class Schnorrkel {
     const mappedPublicNonce = this.getMappedPublicNonces(publicNonces)
     const mappedNonces = this.getMappedNonces()
 
-    const musigData = _multiSigSign(mappedNonces, combinedPublicKey.buffer, privateKey.buffer, hash, publicKeys.map(key => key.buffer), mappedPublicNonce)
+    const musigData = _multiSigSign(this.nonceId, mappedNonces, combinedPublicKey.buffer, privateKey.buffer, hash, publicKeys.map(key => key.buffer), mappedPublicNonce)
 
     // absolutely crucial to delete the nonces once a signature has been crafted.
     // nonce reuse will lead to private key leakage!
-    this.clearNonces(privateKey)
+    this.clearNonces()
 
     return {
       signature: new Signature(Buffer.from(musigData.signature)),

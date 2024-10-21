@@ -9,8 +9,8 @@ describe('testing hasNonces', () => {
     const schnorrkel = new Schnorrkel()
 
     const keyPair = generateRandomKeys()
-    expect(schnorrkel.hasNonces(keyPair.privateKey)).to.equal(false)
-    schnorrkel.generatePublicNonces(keyPair.privateKey)
-    expect(schnorrkel.hasNonces(keyPair.privateKey)).to.equal(true)
+    expect(schnorrkel.hasNonces()).to.equal(false)
+    schnorrkel.generatePublicNonces()
+    expect(schnorrkel.hasNonces()).to.equal(true)
   })
 })

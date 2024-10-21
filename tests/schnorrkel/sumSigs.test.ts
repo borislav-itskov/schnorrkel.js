@@ -12,8 +12,8 @@ describe('testing sumSigs', () => {
 
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
-    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
-    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces()
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces()
 
     const publicNonces = [publicNoncesOne, publicNoncesTwo]
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]

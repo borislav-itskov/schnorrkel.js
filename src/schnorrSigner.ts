@@ -40,7 +40,7 @@ class SchnorrSigner {
   }
 
   getPublicNonces(): PublicNonces {
-    return this._schnorrkel.generatePublicNonces(this._privateKey);
+    return this._schnorrkel.generateOrGetPublicNonces();
   }
 
   sign(commitment: string): SignatureOutput {
@@ -61,16 +61,13 @@ class SchnorrSigner {
   }
 
   /**
-   * The on chain structure
+   * The onchain structure
    *
    * @param sigOutput
-   * @param combinedPublicKey - pass is along if a multisig
    * @returns hex forOnchainValidation
    */
-  getEcrecoverStructure(sigOutput: SignatureOutput, combinedPublicKey?: Key) {
-    const publicKey = combinedPublicKey
-      ? arrayify(combinedPublicKey.buffer)
-      : arrayify(this._publicKey.buffer);
+  getEcrecoverSignature(sigOutput: SignatureOutput) {
+    const publicKey = arrayify(this._publicKey.buffer);
     const px = publicKey.slice(1, 33);
     const parity = publicKey[0] - 2 + 27;
     return defaultAbiCoder.encode(

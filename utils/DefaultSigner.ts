@@ -1,13 +1,12 @@
 import Schnorrkel, { Key, PublicNonces } from '../src/index'
 import { generateRandomKeys } from "../src/core";
-const schnorrkel = new Schnorrkel();
 
 export default class DefaultSigner {
-
+  #schnorrkel = new Schnorrkel();
   #privateKey: Key;
   #publicKey: Key;
 
-  constructor(index: number) {
+  constructor() {
     const keys = generateRandomKeys()
     this.#privateKey = keys.privateKey
     this.#publicKey = keys.publicKey
@@ -18,10 +17,10 @@ export default class DefaultSigner {
   }
 
   getPublicNonces(): PublicNonces {
-    return schnorrkel.generatePublicNonces(this.#privateKey);
+    return this.#schnorrkel.generatePublicNonces();
   }
 
   multiSignMessage(msg: string, publicKeys: Key[], publicNonces: PublicNonces[]) {
-    return schnorrkel.multiSigSign(this.#privateKey, msg, publicKeys, publicNonces);
+    return this.#schnorrkel.multiSigSign(this.#privateKey, msg, publicKeys, publicNonces);
   }
 }

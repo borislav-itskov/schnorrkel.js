@@ -9,7 +9,7 @@ describe('testing fromJson', () => {
     const schnorrkel = new UnsafeSchnorrkel()
 
     const keyPair = generateRandomKeys()
-    schnorrkel.generatePublicNonces(keyPair.privateKey)
+    schnorrkel.generatePublicNonces()
     const jsonData = schnorrkel.toJson()
 
     const schnorrkelFromJson = UnsafeSchnorrkel.fromJson(jsonData)
@@ -22,7 +22,7 @@ describe('testing fromJson', () => {
     const schnorrkel = new UnsafeSchnorrkel()
 
     const keyPair = generateRandomKeys()
-    schnorrkel.generatePublicNonces(keyPair.privateKey)
+    schnorrkel.generatePublicNonces()
     const jsonData = schnorrkel.toJson()
 
     const invalidJsonData = jsonData.slice(0, -1)
