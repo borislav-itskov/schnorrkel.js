@@ -7,8 +7,6 @@ import { _hashPrivateKey, generateRandomKeys } from '../../src/core'
 describe('testing getPublicNonces', () => {
   it('should generate the public nonces and afterwards get them successfully', () => {
     const schnorrkel = new Schnorrkel()
-
-    const keyPair = generateRandomKeys()
     const publicNonces = schnorrkel.generatePublicNonces()
 
     expect(publicNonces).toBeDefined()
@@ -22,9 +20,7 @@ describe('testing getPublicNonces', () => {
     expect(retrievedPublicNonces.kTwoPublic.buffer).to.equal(publicNonces.kTwoPublic.buffer)
   })
   it('should throw an error when calling getPublicNonces if they are not set', () => {
-    const schnorrkel = new Schnorrkel()
-
-    const keyPair = generateRandomKeys()
+    const schnorrkel = new Schnorrkel()    
     expect(() => schnorrkel.getPublicNonces()).toThrowError('Nonces not set')
   })
 })

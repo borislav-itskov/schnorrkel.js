@@ -236,6 +236,10 @@ export const _multiSigSign = (nonceId: string, nonces: InternalNonces, combinedP
  * @returns Buffer summed signature
  */
 export const _sumSigs = (signatures: Buffer[]): Buffer => {
+  if (signatures.length < 2) {
+    throw Error('Expected at least 2 signatures for aggregation')
+  }
+
   let combined = new Uint8Array()
 
   for (let i = 0; i < signatures.length - 1; i++) {

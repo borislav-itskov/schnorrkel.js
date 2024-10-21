@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ethers } from "ethers";
-import SchnorrSigner from "../../src/schnorrSigner.js";
+import SchnorrSigner from "../../src/signers/schnorrSigner.js";
 import { compile } from "../../utils/compile.js";
 import { pk1, wallet } from "../config.js";
 
