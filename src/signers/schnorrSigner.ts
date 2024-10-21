@@ -1,5 +1,5 @@
 import { arrayify, computePublicKey, isHexString } from "ethers/lib/utils";
-import { _generateSchnorrAddr } from "../core";
+import { _generateSchnorrAddr, _verify } from "../core";
 import Schnorrkel from "../schnorrkel";
 import { Key, PublicNonces, SignatureOutput } from "../types";
 import SchnorrProvider from "../providers/schnorrProvider";
@@ -41,6 +41,22 @@ class SchnorrSigner extends SchnorrProvider {
     }
 
     return Schnorrkel.sign(this._privateKey, commitment);
+  }
+
+  /**
+   * Off-chain signature verification
+   *
+   * @param signature - the computed output after sign
+   * @param commitment - the commitment that should have been signed
+   * @returns boolean
+   */
+  verify(commitment: string, signature: SignatureOutput): boolean {
+    return _verify(
+      signature.signature.buffer,
+      commitment,
+      signature.publicNonce.buffer,
+      this.publicKey.buffer
+    );
   }
 }
 

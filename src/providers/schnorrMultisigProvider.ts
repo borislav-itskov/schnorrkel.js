@@ -1,5 +1,5 @@
 import { arrayify, defaultAbiCoder } from "ethers/lib/utils";
-import { _generateSchnorrAddr } from "../core";
+import { _generateSchnorrAddr, _verify } from "../core";
 import Schnorrkel from "../schnorrkel";
 import { PublicNonces, SignatureOutput } from "../types";
 import SchnorrProvider from "./schnorrProvider";
@@ -47,6 +47,26 @@ class SchnorrMultisigProvider {
     return defaultAbiCoder.encode(
       ["bytes32", "bytes32", "bytes32", "uint8"],
       [px, challenge.buffer, sSummed.buffer, parity]
+    );
+  }
+
+  /**
+   * Off-chain signature verification
+   *
+   * @param signature - the computed output after sign
+   * @param commitment - the commitment that should have been signed
+   * @returns boolean
+   */
+  verify(commitment: string, sigOutputs: SignatureOutput[]): boolean {
+    const sSummed = Schnorrkel.sumSigs(
+      sigOutputs.map((output) => output.signature)
+    );
+
+    return _verify(
+      sSummed.buffer,
+      commitment,
+      sigOutputs[0].publicNonce.buffer,
+      Schnorrkel.getCombinedPublicKey(this.getPublicKeys()).buffer
     );
   }
 }
