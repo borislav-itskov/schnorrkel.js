@@ -1,22 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { ethers } from "ethers";
+import { ContractFactory } from "ethers";
 import Schnorrkel from "../../src/index";
 import { compile } from "../../utils/compile";
 import { pk1, pk2, pk3, wallet2 } from "../config";
-import DefaultSigner from "../../utils/DefaultSigner";
 import SchnorrSigner from "../../src/signers/schnorrSigner";
 import SchnorrMultisigProvider from "../../src/providers/schnorrMultisigProvider";
+import {
+  defaultAbiCoder,
+  hashMessage,
+  solidityKeccak256,
+} from "ethers/lib/utils";
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
 
 describe("Multi Sign Tests", function () {
-  async function deployContract(multisigHelper: SchnorrMultisigProvider) {
+  async function deployContract(multisigProvider: SchnorrMultisigProvider) {
     const SchnorrAccountAbstraction = compile("SchnorrAccountAbstraction");
-    const factory = new ethers.ContractFactory(
+    const factory = new ContractFactory(
       SchnorrAccountAbstraction.abi,
       SchnorrAccountAbstraction.bytecode,
       wallet2
     );
-    const schnorrAddr = multisigHelper.getSchnorrAddress();
+    const schnorrAddr = multisigProvider.getSchnorrAddress();
     const contract: any = await factory.deploy([schnorrAddr]);
     const isSigner = await contract.canSign(schnorrAddr);
     expect(isSigner).to.equal(
@@ -29,25 +33,28 @@ describe("Multi Sign Tests", function () {
   it("should generate a schnorr musig2 and validate it on the blockchain", async function () {
     const signerOne = new SchnorrSigner(pk1);
     const signerTwo = new SchnorrSigner(pk2);
-    const multisigHelper = new SchnorrMultisigProvider([signerOne, signerTwo]);
-    const { contract } = await deployContract(multisigHelper);
+    const multisigProvider = new SchnorrMultisigProvider([
+      signerOne,
+      signerTwo,
+    ]);
+    const { contract } = await deployContract(multisigProvider);
 
     const msg = "just a test message";
-    const msgHash = ethers.utils.solidityKeccak256(["string"], [msg]);
-    const publicNonces = multisigHelper.getPublicNonces();
+    const msgHash = solidityKeccak256(["string"], [msg]);
+    const publicNonces = multisigProvider.getPublicNonces();
     const signature = signerOne.sign(
       msgHash,
-      multisigHelper.getPublicKeys(),
+      multisigProvider.getPublicKeys(),
       publicNonces
     );
     const signatureTwo = signerTwo.sign(
       msgHash,
-      multisigHelper.getPublicKeys(),
+      multisigProvider.getPublicKeys(),
       publicNonces
     );
     const result = await contract.isValidSignature(
       msgHash,
-      multisigHelper.getEcrecoverSignature([signature, signatureTwo])
+      multisigProvider.getEcrecoverSignature([signature, signatureTwo])
     );
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32);
   });
@@ -55,18 +62,21 @@ describe("Multi Sign Tests", function () {
   it("should generate the same sig to be sure caching does not affect validation", async function () {
     const signerOne = new SchnorrSigner(pk1);
     const signerTwo = new SchnorrSigner(pk2);
-    const multisigHelper = new SchnorrMultisigProvider([signerOne, signerTwo]);
-    const { contract } = await deployContract(multisigHelper);
+    const multisigProvider = new SchnorrMultisigProvider([
+      signerOne,
+      signerTwo,
+    ]);
+    const { contract } = await deployContract(multisigProvider);
 
     const msg = "just a test message";
-    const msgHash = ethers.utils.solidityKeccak256(["string"], [msg]);
-    const publicKeys = multisigHelper.getPublicKeys();
-    const publicNonces = multisigHelper.getPublicNonces();
+    const msgHash = solidityKeccak256(["string"], [msg]);
+    const publicKeys = multisigProvider.getPublicKeys();
+    const publicNonces = multisigProvider.getPublicNonces();
     const signature = signerOne.sign(msgHash, publicKeys, publicNonces);
     const signatureTwo = signerTwo.sign(msgHash, publicKeys, publicNonces);
     const result = await contract.isValidSignature(
       msgHash,
-      multisigHelper.getEcrecoverSignature([signature, signatureTwo])
+      multisigProvider.getEcrecoverSignature([signature, signatureTwo])
     );
     expect(result).to.equal(ERC1271_MAGICVALUE_BYTES32);
   });
@@ -74,24 +84,27 @@ describe("Multi Sign Tests", function () {
   it("should fail if the signer is totally different", async function () {
     const signerOne = new SchnorrSigner(pk1);
     const signerTwo = new SchnorrSigner(pk2);
-    const multisigHelper = new SchnorrMultisigProvider([signerOne, signerTwo]);
-    const { contract } = await deployContract(multisigHelper);
+    const multisigProvider = new SchnorrMultisigProvider([
+      signerOne,
+      signerTwo,
+    ]);
+    const { contract } = await deployContract(multisigProvider);
 
     const signerThree = new SchnorrSigner(pk3);
-    const multisigHelperAttacker = new SchnorrMultisigProvider([
+    const multisigProviderAttacker = new SchnorrMultisigProvider([
       signerOne,
       signerThree,
     ]);
     const msg = "just a test message";
-    const msgHash = ethers.utils.solidityKeccak256(["string"], [msg]);
-    const publicKeys = multisigHelperAttacker.getPublicKeys();
-    const publicNonces = multisigHelperAttacker.getPublicNonces();
+    const msgHash = solidityKeccak256(["string"], [msg]);
+    const publicKeys = multisigProviderAttacker.getPublicKeys();
+    const publicNonces = multisigProviderAttacker.getPublicNonces();
 
     const signature = signerOne.sign(msgHash, publicKeys, publicNonces);
     const signatureTwo = signerThree.sign(msgHash, publicKeys, publicNonces);
     const result = await contract.isValidSignature(
       msgHash,
-      multisigHelperAttacker.getEcrecoverSignature([signature, signatureTwo])
+      multisigProviderAttacker.getEcrecoverSignature([signature, signatureTwo])
     );
     expect(result).to.equal("0xffffffff");
   });
@@ -99,19 +112,24 @@ describe("Multi Sign Tests", function () {
   it("should fail if only one signature is provided", async function () {
     const signerOne = new SchnorrSigner(pk1);
     const signerTwo = new SchnorrSigner(pk2);
-    const multisigHelper = new SchnorrMultisigProvider([signerOne, signerTwo]);
-    const { contract } = await deployContract(multisigHelper);
+    const multisigProvider = new SchnorrMultisigProvider([
+      signerOne,
+      signerTwo,
+    ]);
+    const { contract } = await deployContract(multisigProvider);
 
     const msg = "just a test message";
-    const msgHash = ethers.utils.solidityKeccak256(["string"], [msg]);
-    const publicKeys = multisigHelper.getPublicKeys();
-    const publicNonces = multisigHelper.getPublicNonces();
+    const msgHash = solidityKeccak256(["string"], [msg]);
+    const publicKeys = multisigProvider.getPublicKeys();
+    const publicNonces = multisigProvider.getPublicNonces();
     const signature = signerOne.sign(msgHash, publicKeys, publicNonces);
 
     try {
-      multisigHelper.getEcrecoverSignature([signature])
+      multisigProvider.getEcrecoverSignature([signature]);
     } catch (e: any) {
-      expect(e.message).to.equal("Expected at least 2 signatures for aggregation");
+      expect(e.message).to.equal(
+        "Expected at least 2 signatures for aggregation"
+      );
     }
 
     const result = await contract.isValidSignature(
@@ -124,37 +142,46 @@ describe("Multi Sign Tests", function () {
   it("should fail if a signer tries to sign twice with the same nonce", async function () {
     const signerOne = new SchnorrSigner(pk1);
     const signerTwo = new SchnorrSigner(pk2);
-    const multisigHelper = new SchnorrMultisigProvider([signerOne, signerTwo]);
+    const multisigProvider = new SchnorrMultisigProvider([
+      signerOne,
+      signerTwo,
+    ]);
 
     const msg = "just a test message";
-    const msgHash = ethers.utils.solidityKeccak256(["string"], [msg]);
-    const publicKeys = multisigHelper.getPublicKeys();
-    expect(
-      signerOne.sign.bind(signerOne, msgHash, publicKeys, [])
-    ).to.throw("Nonces should be exchanged before signing");
+    const msgHash = solidityKeccak256(["string"], [msg]);
+    const publicKeys = multisigProvider.getPublicKeys();
+    expect(signerOne.sign.bind(signerOne, msgHash, publicKeys, [])).to.throw(
+      "Nonces should be exchanged before signing"
+    );
   });
 
   it("should fail if only one signer tries to sign the transaction providing 2 different public nonces", async function () {
     // deploy the contract
     const signerOne = new SchnorrSigner(pk1);
     const signerTwo = new SchnorrSigner(pk2);
-    const multisigHelper = new SchnorrMultisigProvider([signerOne, signerTwo]);
-    const { contract } = await deployContract(multisigHelper);
+    const multisigProvider = new SchnorrMultisigProvider([
+      signerOne,
+      signerTwo,
+    ]);
+    const { contract } = await deployContract(multisigProvider);
 
     const msg = "just a test message";
-    const msgHash = ethers.utils.solidityKeccak256(["string"], [msg]);
-    const publicKeys = multisigHelper.getPublicKeys()
+    const msgHash = solidityKeccak256(["string"], [msg]);
+    const publicKeys = multisigProvider.getPublicKeys();
     const signature = signerOne.sign(
       msgHash,
       publicKeys,
-      multisigHelper.getPublicNonces()
+      multisigProvider.getPublicNonces()
     );
     const signatreTwo = signerOne.sign(
       msgHash,
       publicKeys,
-      multisigHelper.getPublicNonces()
+      multisigProvider.getPublicNonces()
     );
-    const result = await contract.isValidSignature(msgHash, multisigHelper.getEcrecoverSignature([signature, signatreTwo]));
+    const result = await contract.isValidSignature(
+      msgHash,
+      multisigProvider.getEcrecoverSignature([signature, signatreTwo])
+    );
     expect(result).to.equal("0xffffffff");
   });
 
@@ -162,13 +189,16 @@ describe("Multi Sign Tests", function () {
     // deploy the contract
     const signerOne = new SchnorrSigner(pk1);
     const signerTwo = new SchnorrSigner(pk2);
-    const multisigHelper = new SchnorrMultisigProvider([signerOne, signerTwo]);
-    const { contract } = await deployContract(multisigHelper);
+    const multisigProvider = new SchnorrMultisigProvider([
+      signerOne,
+      signerTwo,
+    ]);
+    const { contract } = await deployContract(multisigProvider);
 
     const msg = "just a test message";
-    const msgHash = ethers.utils.solidityKeccak256(["string"], [msg]);
+    const msgHash = solidityKeccak256(["string"], [msg]);
     const publicKeys = [signerTwo.publicKey, signerOne.publicKey];
-    const publicNonces = multisigHelper.getPublicNonces()
+    const publicNonces = multisigProvider.getPublicNonces();
     const combinedPublicKey = Schnorrkel.getCombinedPublicKey(publicKeys);
     const { signature: sigOne, challenge: e } = signerOne.sign(
       msgHash,
@@ -187,8 +217,7 @@ describe("Multi Sign Tests", function () {
     const parity = combinedPublicKey.buffer[0] - 2 + 27;
 
     // wrap the result
-    const abiCoder = new ethers.utils.AbiCoder();
-    const sigData = abiCoder.encode(
+    const sigData = defaultAbiCoder.encode(
       ["bytes32", "bytes32", "bytes32", "uint8"],
       [px, e.buffer, sSummed.buffer, parity]
     );
@@ -211,7 +240,7 @@ describe("Multi Sign Tests", function () {
       expect(e.message).to.equal("At least 2 public keys should be provided");
     }
 
-    const msgHash = ethers.utils.hashMessage("just a test message");
+    const msgHash = hashMessage("just a test message");
     const publicKeys = [signerOne.publicKey];
     const publicNonces = [
       signerOne.getPublicNonces(),

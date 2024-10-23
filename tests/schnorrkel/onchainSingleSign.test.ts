@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ethers } from "ethers";
+import { ContractFactory } from "ethers";
 import { SchnorrSigner } from "../../src";
 import { compile } from "../../utils/compile.js";
 import { pk1, wallet } from "../config.js";
+import { hashMessage } from "ethers/lib/utils.js";
 
 const ERC1271_MAGICVALUE_BYTES32 = "0x1626ba7e";
 
@@ -15,7 +16,7 @@ describe("Single Sign Tests", function () {
     const schnorrAddr = signer.getSchnorrAddress();
 
     // deploying the contract
-    const factory = new ethers.ContractFactory(
+    const factory = new ContractFactory(
       SchnorrAccountAbstraction.abi,
       SchnorrAccountAbstraction.bytecode,
       wallet
@@ -34,7 +35,7 @@ describe("Single Sign Tests", function () {
 
     // sign
     const msg = "just a test message";
-    const msgHash = ethers.utils.hashMessage(msg);
+    const msgHash = hashMessage(msg);
     const signer = new SchnorrSigner(pk1);
     const sig = signer.sign(msgHash);
     const result = await contract.isValidSignature(
