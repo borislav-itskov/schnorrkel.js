@@ -14,5 +14,5 @@ export interface PublicNonces {
 
 
 export type Nonces = {
-  [privateKey: string]: NoncePairs
+  [nonceId: string]: NoncePairs
 }

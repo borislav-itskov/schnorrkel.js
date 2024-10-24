@@ -12,8 +12,8 @@ describe('testing multiSigSign', () => {
 
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
-    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
-    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces()
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces()
 
     const publicNonces = [publicNoncesOne, publicNoncesTwo]
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
@@ -30,7 +30,7 @@ describe('testing multiSigSign', () => {
   it('should requires two public keys or more', () => {
     const schnorrkel = new Schnorrkel()
     const keyPair = generateRandomKeys()
-    const publicNonces = schnorrkel.generatePublicNonces(keyPair.privateKey)
+    const publicNonces = schnorrkel.generatePublicNonces()
 
     const msg = 'test message'
     const msgHash = ethers.utils.hashMessage(msg)
@@ -39,7 +39,7 @@ describe('testing multiSigSign', () => {
     expect(() => schnorrkel.multiSigSign(keyPair.privateKey, msgHash, publicKeys, [publicNonces])).toThrowError('At least 2 public keys should be provided')
   })
 
-  it('should requires nonces', () => {
+  it('should require nonces', () => {
     const schnorrkel = new Schnorrkel()
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
@@ -57,8 +57,8 @@ describe('testing multiSigSign', () => {
 
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
-    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
-    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces()
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces()
 
     const publicNonces = [publicNoncesOne, publicNoncesTwo]
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]

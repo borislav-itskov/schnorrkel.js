@@ -24,5 +24,5 @@ export interface InternalNoncePairs {
 }
 
 export type InternalNonces = {
-  [privateKey: string]: InternalNoncePairs
+  [nonceId: string]: InternalNoncePairs
 }

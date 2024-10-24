@@ -8,8 +8,7 @@ describe('testing generatePublicNonces', () => {
   it('should generate public nonces', () => {
     const schnorrkel = new Schnorrkel()
 
-    const keyPair = generateRandomKeys()
-    const publicNonces = schnorrkel.generatePublicNonces(keyPair.privateKey)
+    const publicNonces = schnorrkel.generatePublicNonces()
 
     expect(publicNonces).toBeDefined()
     expect(publicNonces.kPublic).toBeDefined()

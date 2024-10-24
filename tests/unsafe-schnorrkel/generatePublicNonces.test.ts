@@ -1,17 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {UnsafeSchnorrkel} from '../../src/index'
-import { _hashPrivateKey, generateRandomKeys } from '../../src/core'
+import { _hashPrivateKey } from '../../src/core'
 
 
 describe('testing generatePublicNonces', () => {
   it('should overwrite public nonces with same private key', () => {
     const schnorrkel = new UnsafeSchnorrkel()
 
-    const keyPair = generateRandomKeys()
-    const publicNoncesOne = schnorrkel.generatePublicNonces(keyPair.privateKey)
+    const publicNoncesOne = schnorrkel.generatePublicNonces()
     const jsonDataOne = schnorrkel.toJson()
-    const publicNoncesTwo = schnorrkel.generatePublicNonces(keyPair.privateKey)
+    const publicNoncesTwo = schnorrkel.generatePublicNonces()
     const jsonDataTwo = schnorrkel.toJson()
 
     expect(publicNoncesOne.kPublic).not.toEqual(publicNoncesTwo.kPublic)
@@ -20,8 +19,8 @@ describe('testing generatePublicNonces', () => {
     const dataOne = JSON.parse(jsonDataOne)
     const dataTwo = JSON.parse(jsonDataTwo)
 
-    const hash = _hashPrivateKey(keyPair.privateKey.buffer)
-
-    expect(dataOne.nonces[hash]).not.toEqual(dataTwo.nonces[hash])
+    const firstNonceId = Object.keys(dataOne.nonces)[0]
+    const secondNonceId = Object.keys(dataTwo.nonces)[0]
+    expect(dataOne.nonces[firstNonceId]).not.toEqual(dataTwo.nonces[secondNonceId])
   })
 })

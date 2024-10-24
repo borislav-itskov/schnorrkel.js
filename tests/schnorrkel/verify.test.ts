@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import Schnorrkel, { Key } from '../../src/index'
+import Schnorrkel, { Key, SchnorrMultisigProvider, SchnorrSigner } from '../../src/index'
 import { _hashPrivateKey, generateRandomKeys } from '../../src/core'
 import { ethers } from 'ethers'
+import { hexlify } from 'ethers/lib/utils'
 
 describe('testing verify', () => {
   it('should verify a normal schnorr signature and make sure sign does not overwrite the private key', () => {
@@ -29,14 +30,29 @@ describe('testing verify', () => {
     const secondRes = Schnorrkel.verify(secondSig.signature, ethers.utils.solidityKeccak256(['string'], [secondMsg]), secondSig.publicNonce, new Key(Buffer.from(publicKey)))
     expect(secondRes).toEqual(true)
   })
+  it('should verify a normal schnorr signature using the schnorr signer', () => {
+    const privateKey = hexlify(ethers.utils.randomBytes(32))
+    const signer = new SchnorrSigner(privateKey)
+
+    const msg = 'test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
+    const signature = signer.sign(msgHash)
+
+    expect(signature).toBeDefined()
+    expect(signature.publicNonce.buffer).toHaveLength(33)
+    expect(signature.signature.buffer).toHaveLength(32)
+    expect(signature.challenge.buffer).toHaveLength(32)
+    const result = signer.verify(msgHash, signature)
+    expect(result).toEqual(true)
+  })
   it('should sum signatures and verify them', () => {
     const schnorrkelOne = new Schnorrkel()
     const schnorrkelTwo = new Schnorrkel()
 
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
-    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
-    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces()
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces()
 
     const publicNonces = [publicNoncesOne, publicNoncesTwo]
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
@@ -54,6 +70,21 @@ describe('testing verify', () => {
 
     expect(result).toEqual(true)
   })
+  it('should sum signatures and verify them using the schnorr signer', () => {
+    const signerOne = new SchnorrSigner(`0x${generateRandomKeys().privateKey.toHex()}`)
+    const signerTwo = new SchnorrSigner(`0x${generateRandomKeys().privateKey.toHex()}`)
+    const multisigProvider = new SchnorrMultisigProvider([signerOne, signerTwo])
+    const publicNonces = multisigProvider.getPublicNonces()
+    const publicKeys = multisigProvider.getPublicKeys()
+
+    const msg = 'test message'
+    const msgHash = ethers.utils.solidityKeccak256(['string'], [msg])
+    const signatureOne = signerOne.sign(msgHash, publicKeys, publicNonces)
+    const signatureTwo = signerTwo.sign(msgHash, publicKeys, publicNonces)
+    
+    const result = multisigProvider.verify(msgHash, [signatureOne, signatureTwo])
+    expect(result).toEqual(true)
+  })
   it('should make sure private keys are not overwritten during signing', () => {
     const schnorrkelOne = new Schnorrkel()
     const schnorrkelTwo = new Schnorrkel()
@@ -61,8 +92,8 @@ describe('testing verify', () => {
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
 
-    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
-    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces()
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces()
     
     const publicNonces = [publicNoncesOne, publicNoncesTwo]
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
@@ -117,8 +148,8 @@ describe('testing verify', () => {
 
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
-    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
-    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces()
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces()
 
     const publicNonces = [publicNoncesOne, publicNoncesTwo]
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]
@@ -162,8 +193,8 @@ describe('testing verify', () => {
 
     const keyPairOne = generateRandomKeys()
     const keyPairTwo = generateRandomKeys()
-    const publicNoncesOne = schnorrkelOne.generatePublicNonces(keyPairOne.privateKey)
-    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces(keyPairTwo.privateKey)
+    const publicNoncesOne = schnorrkelOne.generatePublicNonces()
+    const publicNoncesTwo = schnorrkelTwo.generatePublicNonces()
 
     const publicNonces = [publicNoncesOne, publicNoncesTwo]
     const publicKeys = [keyPairOne.publicKey, keyPairTwo.publicKey]

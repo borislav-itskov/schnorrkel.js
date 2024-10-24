@@ -153,21 +153,16 @@ export const _hashPrivateKey = (privateKey: Buffer): string => {
 
 /**
  * Generate the nonces for the next signature.
- * Use the hash of the private key for a unique identifier
  *
- * @param privateKey
  * @returns
  */
-export const _generateNonces = (privateKey: Buffer): {
+export const _generateNonces = (): {
   privateNonceData: Pick<InternalNoncePairs, 'k' | 'kTwo'>,
-  publicNonceData: InternalPublicNonces,
-  hash: string,
+  publicNonceData: InternalPublicNonces
 } => {
-  const hash = _hashPrivateKey(privateKey)
   const nonce = generateNonce()
 
   return {
-    hash,
     privateNonceData: {
       k: nonce.k,
       kTwo: nonce.kTwo,
@@ -179,14 +174,13 @@ export const _generateNonces = (privateKey: Buffer): {
   }
 }
 
-export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer, privateKey: Buffer, hash: string, publicKeys: Buffer[], publicNonces: InternalPublicNonces[]): InternalSignature => {
+export const _multiSigSign = (nonceId: string, nonces: InternalNonces, combinedPublicKey: Buffer, privateKey: Buffer, hash: string, publicKeys: Buffer[], publicNonces: InternalPublicNonces[]): InternalSignature => {
   if (publicKeys.length < 2) {
     throw Error('At least 2 public keys should be provided')
   }
 
   const localPk = Buffer.from(privateKey)
-  const xHashed = _hashPrivateKey(localPk)
-  if (!(xHashed in nonces) || Object.keys(nonces[xHashed]).length === 0) {
+  if (!(nonceId in nonces) || Object.keys(nonces[nonceId]).length === 0) {
     throw Error('Nonces should be exchanged before signing')
   }
 
@@ -199,8 +193,8 @@ export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer,
     return Buffer.from(secp256k1.publicKeyCombine([batch.kPublic, secp256k1.publicKeyTweakMul(batch.kTwoPublic, b)]))
   })
   const signerEffectiveNonce = Buffer.from(secp256k1.publicKeyCombine([
-    nonces[xHashed].kPublic,
-    secp256k1.publicKeyTweakMul(nonces[xHashed].kTwoPublic, b)
+    nonces[nonceId].kPublic,
+    secp256k1.publicKeyTweakMul(nonces[nonceId].kTwoPublic, b)
   ]))
   const inArray = effectiveNonces.filter(nonce => areBuffersSame(nonce, signerEffectiveNonce)).length != 0
   if (!inArray) {
@@ -210,7 +204,7 @@ export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer,
   const R = Buffer.from(secp256k1.publicKeyCombine(effectiveNonces))
   const e = challenge(R, hash, combinedPublicKey)
 
-  const { k, kTwo } = nonces[xHashed]
+  const { k, kTwo } = nonces[nonceId]
 
   // xe = x * e
   const xe = secp256k1.privateKeyTweakMul(localPk, e)
@@ -242,6 +236,10 @@ export const _multiSigSign = (nonces: InternalNonces, combinedPublicKey: Buffer,
  * @returns Buffer summed signature
  */
 export const _sumSigs = (signatures: Buffer[]): Buffer => {
+  if (signatures.length < 2) {
+    throw Error('Expected at least 2 signatures for aggregation')
+  }
+
   let combined = new Uint8Array()
 
   for (let i = 0; i < signatures.length - 1; i++) {
