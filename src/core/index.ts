@@ -4,6 +4,7 @@ import ecurve, { Point } from 'ecurve'
 import bigi from 'bigi'
 import { InternalNoncePairs, InternalNonces, InternalPublicNonces, InternalSignature } from './types'
 import { KeyPair } from '../types'
+import { getAddress } from 'ethers/lib/utils'
 
 const curve = ecurve.getCurveByName('secp256k1')
 
@@ -288,7 +289,7 @@ export const _generateSchnorrAddr = (combinedPublicKey: Buffer): string => {
   }
 
   const px = ethers.utils.hexlify(combinedPublicKey.subarray(1,33))
-  return '0x' + px.slice(px.length - 40, px.length)
+  return getAddress('0x' + px.slice(px.length - 40, px.length))
 }
 
 export const _sign = (privateKey: Buffer, hash: string): InternalSignature  => {
